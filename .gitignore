@@ -1,0 +1,19 @@
+# Build output
+ft_nmap
+*.o
+obj/
+
+# Dependency libraries (if added later)
+*.a
+*.so
+*.dylib
+
+# OS metadata
+.DS_Store
+
+# Editor files
+*~
+*.swp
+*.swo
+.vscode/
+.idea/
