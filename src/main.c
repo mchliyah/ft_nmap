@@ -26,28 +26,71 @@ int main(int argc, char **argv) {
     int speedup = 0;
 
     // Parse arguments
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--help") == 0) {
-            print_help();
-        } else if (strcmp(argv[i], "--ip") == 0 && i + 1 < argc) {
-            ip = argv[++i];
-        } else if (strcmp(argv[i], "--file") == 0 && i + 1 < argc) {
-            file = argv[++i];
-        } else if (strcmp(argv[i], "--ports") == 0 && i + 1 < argc) {
-            ports = argv[++i];
-        } else if (strcmp(argv[i], "--scan") == 0 && i + 1 < argc) {
-            scans = argv[++i];
-        } else if (strcmp(argv[i], "--speedup") == 0 && i + 1 < argc) {
-            speedup = atoi(argv[++i]);
-            if (speedup > 250) {
-                fprintf(stderr, "Speedup too high (max 250).\n");
+
+    static struct option long_options[] = {
+        {"help", no_argument, 0, 'h'},
+        {"ip", required_argument, 0, 'i'},
+        {"ports", required_argument, 0, 'p'},
+        {"file", required_argument, 0, 'f'},
+        {"scan", required_argument, 0, 's'},
+        {"speedup", required_argument, 0, 'S'},
+        {0, 0, 0, 0}
+    };
+
+
+    int opt;
+    while ((opt = getopt_long(argc, argv, "hi:p:", long_options, NULL)) != -1) {
+        switch (opt) {
+            case 'h':
+                print_help();
+                break;
+            case 'i':
+                ip = optarg;
+                printf("IP address set to: %s\n", ip);
+                break;
+            case 'p':
+                ports = optarg;
+                break;
+            case 'f':
+                file = optarg;
+                break;
+            case 's':
+                scans = optarg;
+                break;
+            case 'S':
+                speedup = atoi(optarg);
+                if (speedup < 1 || speedup > 250) {
+                    fprintf(stderr, "Speedup must be between 1 and 250.\n");
+                    return 1;
+                }
+                break;
+            default:
+                fprintf(stderr, "Unknown option: %c\n", opt);
                 return 1;
-            }
-        } else {
-            fprintf(stderr, "Unknown or invalid argument: %s\n", argv[i]);
-            return 1;
         }
     }
+    // for (int i = 1; i < argc; i++) {
+    //     if (strcmp(argv[i], "--help") == 0) {
+    //         print_help();
+    //     } else if (strcmp(argv[i], "--ip") == 0 && i + 1 < argc) {
+    //         ip = argv[++i];
+    //     } else if (strcmp(argv[i], "--file") == 0 && i + 1 < argc) {
+    //         file = argv[++i];
+    //     } else if (strcmp(argv[i], "--ports") == 0 && i + 1 < argc) {
+    //         ports = argv[++i];
+    //     } else if (strcmp(argv[i], "--scan") == 0 && i + 1 < argc) {
+    //         scans = argv[++i];
+    //     } else if (strcmp(argv[i], "--speedup") == 0 && i + 1 < argc) {
+    //         speedup = atoi(argv[++i]);
+    //         if (speedup > 250) {
+    //             fprintf(stderr, "Speedup too high (max 250).\n");
+    //             return 1;
+    //         }
+    //     } else {
+    //         fprintf(stderr, "Unknown or invalid argument: %s\n", argv[i]);
+    //         return 1;
+    //     }
+    // }
 
     // Validation
     if (!ip && !file) {
