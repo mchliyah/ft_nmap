@@ -18,14 +18,14 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // Default values
+    // values
     char *ip = NULL;
     char *file = NULL;
     char *ports = NULL;
     char *scans = NULL;
     int speedup = 0;
 
-    // Parse arguments
+    // arguments
 
     static struct option long_options[] = {
         {"help", no_argument, 0, 'h'},
