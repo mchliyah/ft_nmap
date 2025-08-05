@@ -14,6 +14,8 @@ void print_help(void) {
 
 int main(int argc, char **argv) {
 
+    //TODO: time scaning
+
     t_config config = INIT_CONFIG();
     // t_config config;
     // memset(&config, 0, sizeof(t_config));

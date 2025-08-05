@@ -9,7 +9,7 @@ CC            := cc
 CFLAGS        := -Wall -Wextra -Werror
 DEBUG_FLAGS   := -g3 -O0
 RELEASE_FLAGS := -O2
-LIBS          := -lpcap -lpthread
+# LIBS          := -lpcap -lpthread
 
 # ===== Automatic File Detection =====
 SRCS        := $(wildcard $(SRCS_DIR)/*.c)
