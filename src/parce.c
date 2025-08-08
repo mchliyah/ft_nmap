@@ -25,6 +25,8 @@ void parse_ports(t_config *config) {
             config->port_count++;
         }
         token = strtok(NULL, ",");
+
+        // TODO: check that the ports are numbers (ERROR 80,str,443)
     }
 
     // Allocate and fill port list
@@ -47,6 +49,7 @@ void parse_ports(t_config *config) {
     }
 }
 
+// scan types example (S,N,F,X...)
 void parse_scan_types(t_config *config) {
     if (!config->scans) {
         // Default to all scan types
