@@ -185,6 +185,8 @@ void *scan_thread(void *arg) {
                 
                 pthread_mutex_unlock(&mutex);
                 /////////////////////////////////////////////////
+
+                // TODO: implement the logic based on server respense
                 
                 close(sock);
                 printf("SYN sent\n");
