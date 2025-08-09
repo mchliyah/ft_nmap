@@ -24,6 +24,15 @@
 #include <libnl3/netlink/netlink-compat.h>
 
 
+typedef enum {
+    STATE_WAITING,
+    STATE_OPEN,
+    STATE_CLOSED,
+    STATE_FILTERED
+} port_state_t;
+
+
+
 // defauls values
 #define MAX_PORTS 65535
 #define MAX_SCAN_TYPES 6
@@ -41,7 +50,10 @@
     .port_list = NULL,  \
     .port_count = 0,    \
     .scan_types = NULL, \
-    .scan_type_count = 0 \
+    .scan_type_count = 0, \
+    .mutex = PTHREAD_MUTEX_INITIALIZER, \
+    .cond = PTHREAD_COND_INITIALIZER, \
+    .listner_thread_done = 0, \
 }
 typedef struct {
     const char *name;
@@ -61,6 +73,9 @@ typedef struct {
     int port_count;
     char **scan_types;
     int scan_type_count;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+    int listner_thread_done;
 } t_config;
 
 typedef struct {
@@ -74,6 +89,8 @@ typedef struct {
     t_config *config;
     int port;
     struct sockaddr_in target;
+    port_state_t state;
+    uint32_t expected_ack;
 } capture_thread_args;
 
 // function prototypes
@@ -81,6 +98,7 @@ void print_help();
 void parse_args(int argc, char **argv, t_config *config);
 void parse_ports(t_config *config);
 void parse_scan_types(t_config *config);
-void *scan_thread(void *arg);
 void run_scan(t_config *config);
+void *scan_thread(void *arg);
+void *capture_responses(void *arg);
 const char* find_interface_for_ip(const char *target_ip);
