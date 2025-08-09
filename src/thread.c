@@ -124,10 +124,10 @@ void *scan_thread(void *arg) {
         for (int scan_idx = 0; scan_idx < config->scan_type_count; scan_idx++) {
             const char *scan_type = config->scan_types[scan_idx];
 
-            // printf("[Thread %d] Port %d (%s): %s scan - ",
-            //       data->thread_id, port,
-            //       service ? service->s_name : "unknown",
-            //       scan_type);
+            printf("[Thread %d] Port %d (%s): %s scan - ",
+                  data->thread_id, port,
+                  service ? service->s_name : "unknown",
+                  scan_type);
 
             // Common scan preparation
             struct sockaddr_in target = {

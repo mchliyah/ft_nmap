@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  ft_nmap:
+    build: .
+    container_name: ft_nmap
+    # Enable privileged mode for raw socket access (required for packet crafting)
+    privileged: true
+    # Mount the source code for development
+    volumes:
+      - .:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    # Keep container running for interactive use
+    tty: true
+    stdin_open: true
+    # Network mode host for better network access
+    network_mode: host
+    # Override default command for development
+    command: /bin/bash
+
+  # Development service for rebuilding
+  ft_nmap-dev:
+    build: .
+    container_name: ft_nmap-dev
+    privileged: true
+    volumes:
+      - .:/app
+    working_dir: /app
+    tty: true
+    stdin_open: true
+    network_mode: host
+    # Auto-rebuild on file changes
+    command: /bin/bash -c "while true; do make clean && make && sleep 2; done"
