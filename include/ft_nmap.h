@@ -15,6 +15,21 @@
 #include <errno.h>
 #include <time.h>
 #include <pcap.h>
+#include <limits.h>
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <net/route.h>
+#include <sys/ioctl.h>
+#include <linux/if_packet.h>
+#include <libnl3/netlink/netlink-compat.h>
+
+
+// defauls values
+#define MAX_PORTS 65535
+#define MAX_SCAN_TYPES 6
+#define DEFAULT_SPEEDUP 10
+#define DEFAULT_PORTS "1-1024"
+#define DEFAULT_SCANS "S"
 
 // configuration
 #define INIT_CONFIG() { \
@@ -28,6 +43,13 @@
     .scan_types = NULL, \
     .scan_type_count = 0 \
 }
+typedef struct {
+    const char *name;
+    int has_arg;
+    int *flag;
+    int val;
+} t_option;
+
 
 typedef struct {
     char *ip ;
@@ -49,11 +71,10 @@ typedef struct {
 } scan_thread_data;
 
 typedef struct {
-    const char *name;
-    int has_arg;
-    int *flag;
-    int val;
-} t_option;
+    t_config *config;
+    int port;
+    struct sockaddr_in target;
+} capture_thread_args;
 
 // function prototypes
 void print_help();
@@ -62,3 +83,4 @@ void parse_ports(t_config *config);
 void parse_scan_types(t_config *config);
 void *scan_thread(void *arg);
 void run_scan(t_config *config);
+const char* find_interface_for_ip(const char *target_ip);

@@ -7,7 +7,7 @@ INC_DIR     := include
 # ===== Compiler & Flags =====
 CC            := cc
 CFLAGS        := -Wall -Wextra -Werror
-DEBUG_FLAGS   := -g3 -O0
+DEBUG_FLAGS   := -g3 -O0 -fsanitize=address
 RELEASE_FLAGS := -O2
 LIBS          := -lpcap -lpthread
 
