@@ -21,8 +21,6 @@
 #include <net/route.h>
 #include <sys/ioctl.h>
 #include <linux/if_packet.h>
-#include <libnl3/netlink/netlink-compat.h>
-
 
 typedef enum {
     STATE_WAITING,
@@ -31,9 +29,7 @@ typedef enum {
     STATE_FILTERED
 } port_state_t;
 
-
-
-// defauls values
+// defaults values
 #define MAX_PORTS 65535
 #define MAX_SCAN_TYPES 6
 #define DEFAULT_SPEEDUP 10
@@ -55,6 +51,7 @@ typedef enum {
     .cond = PTHREAD_COND_INITIALIZER, \
     .listner_thread_done = 0, \
 }
+
 typedef struct {
     const char *name;
     int has_arg;
@@ -62,9 +59,8 @@ typedef struct {
     int val;
 } t_option;
 
-
 typedef struct {
-    char *ip ;
+    char *ip;
     char *file;
     char *ports;
     char *scans;
@@ -90,7 +86,8 @@ typedef struct {
     int port;
     struct sockaddr_in target;
     port_state_t state;
-    uint32_t expected_ack;
+    uint16_t src_port;
+    uint32_t sent_seq;
 } capture_thread_args;
 
 // function prototypes
@@ -101,4 +98,7 @@ void parse_scan_types(t_config *config);
 void run_scan(t_config *config);
 void *scan_thread(void *arg);
 void *capture_responses(void *arg);
-const char* find_interface_for_ip(const char *target_ip);
+void *capture_responses_debug(void *arg);
+const char* find_interface_for_target(const char *target_ip);
+const char* get_interface_ip(const char *target_ip);
+void init_scan();
