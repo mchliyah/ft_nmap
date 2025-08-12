@@ -21,34 +21,37 @@ This document explains how to use Docker with the ft_nmap project for cross-plat
 ./docker.sh run
 ```
 
-### 3. Run ft_nmap Scans
+### 3. Build and Run ft_nmap
 
 ```bash
-# Show help
-./docker.sh scan --help
+# Inside the container, compile the project
+make
 
-# Example scan
-./docker.sh scan -p 80,443 192.168.1.1
+# Run ft_nmap
+./ft_nmap
 ```
 
 ## Available Commands
 
-| Command | Description |
-|---------|-------------|
-| `./docker.sh build` | Build the Docker image |
-| `./docker.sh run` | Start interactive shell in container |
-| `./docker.sh scan [args]` | Run ft_nmap with specified arguments |
-| `./docker.sh dev` | Start development mode with auto-rebuild |
-| `./docker.sh clean` | Clean up containers and images |
-| `./docker.sh help` | Show help message |
+| Command             | Description                          |
+| ------------------- | ------------------------------------ |
+| `./docker.sh build` | Build the Docker image               |
+| `./docker.sh run`   | Start interactive shell in container |
+| `./docker.sh clean` | Clean up containers and images       |
+| `./docker.sh help`  | Show help message                    |
 
 ## Development Workflow
 
 ### For Active Development
 
 ```bash
-# Start development mode (auto-rebuilds on changes)
-./docker.sh dev
+# Build and run interactive shell
+./docker.sh build
+./docker.sh run
+
+# Inside the container:
+make
+./ft_nmap --help
 ```
 
 ### For Testing
@@ -56,38 +59,38 @@ This document explains how to use Docker with the ft_nmap project for cross-plat
 ```bash
 # Build and test
 ./docker.sh build
-./docker.sh scan --help
+./docker.sh run
+
+# Inside the container:
+make
+./ft_nmap
 ```
 
 ## Docker Compose Services
 
 ### ft_nmap
-- Main service for running scans
+
+- Main service for running the application
 - Privileged mode for raw socket access
 - Host network mode for better network access
-
-### ft_nmap-dev
-- Development service with auto-rebuild
-- Watches for file changes
-- Automatically recompiles the project
 
 ## Troubleshooting
 
 ### Permission Issues
+
 If you encounter permission issues, the container runs as a non-root user by default. For network scanning that requires raw sockets, the container uses privileged mode.
 
 ### Network Access
+
 The container uses host network mode to ensure proper network access for scanning. This is necessary for raw socket operations.
 
 ### Rebuilding
+
 If you make changes to the source code:
 
 ```bash
-# For manual rebuild
+# Rebuild the image
 ./docker.sh build
-
-# For automatic rebuild (development mode)
-./docker.sh dev
 ```
 
 ## File Structure
