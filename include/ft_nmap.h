@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#define __FAVOR_BSD
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
