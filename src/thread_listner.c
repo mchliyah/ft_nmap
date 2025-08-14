@@ -184,6 +184,9 @@ void *capture_responses_debug(void *arg) {
 
     const char *src_ip = get_interface_ip(args->config->ip);
     snprintf(filter, sizeof(filter), "tcp");
+    // snprintf(filter, sizeof(filter), 
+        //  "tcp and src host %s and src port %d and dst host %s and dst port %d",
+        //  args->config->ip, args->port, src_ip, args->src_port);
     
     if (pcap_compile(handle, &fp, filter, 0, PCAP_NETMASK_UNKNOWN) == -1 ||
         pcap_setfilter(handle, &fp) == -1) {
@@ -194,7 +197,7 @@ void *capture_responses_debug(void *arg) {
         return NULL;
     }
 
-    printf("DEBUG: Using broad filter: %s\n", filter);
+    printf("DEBUG: Using targeted filter: %s\n", filter); 
     printf("DEBUG: Expected source IP: %s, source port: %d\n", src_ip, args->src_port);
     printf("DEBUG: Target IP: %s, target port: %d\n", args->config->ip, args->port);
 
@@ -226,7 +229,7 @@ void *capture_responses_debug(void *arg) {
         
         if (packet) {
             packet_count++;
-            
+            printf("DEBUG: Captured packet %d, length: %d bytes\n", packet_count, header.len);
             if (header.len < 14 + 20 + 20) {
                 continue;
             }
@@ -248,26 +251,22 @@ void *capture_responses_debug(void *arg) {
                    tcp->fin ? "FIN " : "",
                    ntohl(tcp->seq), ntohl(tcp->ack_seq));
 
-            if (strcmp(src_ip_str, args->config->ip) == 0 && 
-                ntohs(tcp->source) == args->port) {
-                printf("DEBUG: *** MATCH FOUND! This is a response to our scan ***\n");
-                
-                if (strcmp(dst_ip_str, src_ip) == 0 && ntohs(tcp->dest) == args->src_port) {
-                    printf("DEBUG: *** EXACT PORT MATCH! ***\n");
-                    
-                    pthread_mutex_lock(&args->config->mutex);
-                    if (tcp->syn && tcp->ack) {
-                        args->state = STATE_OPEN;
-                        printf("Port %d: OPEN (SYN-ACK received)\n", args->port);
-                    } else if (tcp->rst) {
-                        args->state = STATE_CLOSED;
-                        printf("Port %d: CLOSED (RST received)\n", args->port);
-                    }
-                    pthread_cond_signal(&args->config->cond);
-                    pthread_mutex_unlock(&args->config->mutex);
-                    break;
-                }
+            //TODO: the DEBUG above show that we are receiving a response to our scan SYN-ACK but it is not seting the port as open here ??
+            pthread_mutex_lock(&args->config->mutex);
+            if (tcp->syn && tcp->ack) {
+                args->state = STATE_OPEN;
+                printf("Port %d: OPEN (SYN-ACK received)\n", args->port);
+                pthread_cond_signal(&args->config->cond);
+                pthread_mutex_unlock(&args->config->mutex);
+                break;
+            } else if (tcp->rst) {
+                args->state = STATE_CLOSED;
+                printf("Port %d: CLOSED (RST received)\n", args->port);
+                pthread_cond_signal(&args->config->cond);
+                pthread_mutex_unlock(&args->config->mutex);
+                break;
             }
+            pthread_mutex_unlock(&args->config->mutex);
         }
 
         usleep(1000);

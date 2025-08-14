@@ -50,6 +50,8 @@ typedef enum {
     .mutex = PTHREAD_MUTEX_INITIALIZER, \
     .cond = PTHREAD_COND_INITIALIZER, \
     .listner_thread_done = 0, \
+    .scaner_on = 0, \
+    .scan_complete = 0 \
 }
 
 typedef struct {
@@ -72,6 +74,8 @@ typedef struct {
     pthread_mutex_t mutex;
     pthread_cond_t cond;
     int listner_thread_done;
+    int scaner_on;
+    int scan_complete;
 } t_config;
 
 typedef struct {
@@ -89,6 +93,15 @@ typedef struct {
     uint16_t src_port;
     uint32_t sent_seq;
 } capture_thread_args;
+
+struct pseudo_header {
+    unsigned int source_address;
+    unsigned int dest_address;
+    unsigned char placeholder;
+    unsigned char protocol;
+    unsigned short tcp_length;
+    struct tcphdr tcp;
+};
 
 // function prototypes
 void print_help();
