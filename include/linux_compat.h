@@ -1,6 +1,11 @@
 #ifndef LINUX_COMPAT_H
 #define LINUX_COMPAT_H
 
+// Ensure errno is properly declared on macOS
+#ifndef errno
+extern int errno;
+#endif
+
 #ifdef __APPLE__
 // This file is for VS Code IntelliSense compatibility only
 // It won't be used during actual compilation in Docker
