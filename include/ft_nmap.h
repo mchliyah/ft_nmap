@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <time.h>
 #include <pcap.h>
+#include "linux_compat.h"
 
 // configuration
 #define INIT_CONFIG() { \
