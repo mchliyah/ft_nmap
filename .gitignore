@@ -21,3 +21,4 @@ obj/
 # unwanted files
 get_interface_tocheck
 out
+./test*

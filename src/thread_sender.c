@@ -1,112 +1,9 @@
 #include "../include/ft_nmap.h"
 
-const char* get_interface_ip(const char *target_ip) {
-    struct ifaddrs *ifaddr, *ifa;
-    uint32_t target = inet_addr(target_ip);
-    static char ip_str[INET_ADDRSTRLEN];
-    
-    if (getifaddrs(&ifaddr) == -1) {
-        perror("getifaddrs");
-        return "10.0.0.78"; // fallback
-    }
-
-    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-        if (!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_INET)
-            continue;
-        
-        // Skip loopback
-        if (strcmp(ifa->ifa_name, "lo") == 0)
-            continue;
-
-        struct sockaddr_in *addr = (struct sockaddr_in *)ifa->ifa_addr;
-        struct sockaddr_in *mask = (struct sockaddr_in *)ifa->ifa_netmask;
-
-        // Check if target is in same subnet
-        if (mask && (addr->sin_addr.s_addr & mask->sin_addr.s_addr) == 
-            (target & mask->sin_addr.s_addr)) {
-            inet_ntop(AF_INET, &addr->sin_addr, ip_str, INET_ADDRSTRLEN);
-            freeifaddrs(ifaddr);
-            return ip_str;
-        }
-    }
-
-    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-        if (!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_INET)
-            continue;
-        if (strcmp(ifa->ifa_name, "lo") == 0)
-            continue;
-        
-        struct sockaddr_in *addr = (struct sockaddr_in *)ifa->ifa_addr;
-        inet_ntop(AF_INET, &addr->sin_addr, ip_str, INET_ADDRSTRLEN);
-        freeifaddrs(ifaddr);
-        return ip_str;
-    }
-
-    freeifaddrs(ifaddr);
-    return "10.0.0.78"; // ultimate fallback
-}
-
 void init_scan() {
     srand(time(NULL));
 }
 
-unsigned short csum(unsigned short *ptr, int nbytes) {
-    register long sum;
-    unsigned short oddbyte;
-    register short answer;
-
-    sum = 0;
-    while (nbytes > 1) {
-        sum += *ptr++;
-        nbytes -= 2;
-    }
-    if (nbytes == 1) {
-        oddbyte = 0;
-        *((unsigned char*)&oddbyte) = *(unsigned char*)ptr;
-        sum += oddbyte;
-    }
-
-    sum = (sum >> 16) + (sum & 0xffff);
-    sum += (sum >> 16);
-    answer = (short)~sum;
-    return answer;
-}
-
-// Generate a random source port like nmap does
-uint16_t generate_source_port() {
-    return 32768 + (rand() % 28232); // Nmap's range
-}
-
-void set_ip_header(struct iphdr *ip, const char *src_ip, struct sockaddr_in *target) {
-    ip->ihl = 5;
-    ip->version = 4;
-    ip->tos = 0;
-    ip->tot_len = htons(sizeof(struct iphdr) + sizeof(struct tcphdr));
-    ip->id = htons(rand() & 0xFFFF);
-    ip->frag_off = 0;
-    ip->ttl = 64;
-    ip->protocol = IPPROTO_TCP;
-    ip->saddr = inet_addr(src_ip);
-    ip->daddr = target->sin_addr.s_addr;
-    ip->check = 0;
-}
-
-void set_tcp_header(struct tcphdr *tcp, uint16_t src_port, struct sockaddr_in *target, uint32_t seq) {
-    tcp->source = htons(src_port);
-    tcp->dest = target->sin_port;
-    tcp->seq = htonl(seq);
-    tcp->ack_seq = 0;
-    tcp->doff = 6;
-    tcp->syn = 1;
-    tcp->ack = 0;
-    tcp->fin = 0;
-    tcp->rst = 0;
-    tcp->psh = 0;
-    tcp->urg = 0;
-    tcp->window = htons(1024);
-    tcp->check = 0; 
-    tcp->urg_ptr = 0;
-}
 void send_syn(int sock, struct sockaddr_in *target, const char *src_ip, 
              uint16_t src_port, int dest_port) {
     char datagram[4096] = {0};
@@ -153,27 +50,6 @@ void send_syn(int sock, struct sockaddr_in *target, const char *src_ip,
                (struct sockaddr *)target, sizeof(*target)) < 0) {
         perror("sendto");
     }
-}
-void block_rst(int src_port) {
-    char cmd[256];
-    snprintf(cmd, sizeof(cmd),
-             "iptables -A OUTPUT -p tcp --tcp-flags RST RST "
-             "--sport %d -j DROP",
-             src_port);
-    int s = system(cmd);
-    if (s == -1)
-        return;
-}
-
-void unblock_rst(int src_port) {
-    char cmd[256];
-    snprintf(cmd, sizeof(cmd),
-             "iptables -D OUTPUT -p tcp --tcp-flags RST RST "
-             "--sport %d -j DROP",
-             src_port);
-    int s = system(cmd);
-    if (s == -1)
-        return;
 }
 
 void process_packet(unsigned char *buffer, int size) {
@@ -258,18 +134,12 @@ void *scan_thread(void *arg) {
             close(sock);
             continue;
         }
-
-        // Block RST packets for this source port
-        // block_rst(src_port);
-        
         // Send SYN packet
         send_syn(sock, &target, src_ip, src_port, port);
         
-        // Wait for response
+
         usleep(500);
-        
-        // Unblock RST
-        // unblock_rst(src_port);
+
         close(sock);
     }
 
