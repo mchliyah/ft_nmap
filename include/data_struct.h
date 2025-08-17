@@ -1,26 +1,4 @@
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <getopt.h>
-#include <pthread.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <netdb.h>
-#include <errno.h>
-#include <time.h>
-#include <pcap.h>
-#include <limits.h>
-#include <ifaddrs.h>
-#include <net/if.h>
-#include <net/route.h>
-#include <sys/ioctl.h>
-#include <linux/if_packet.h>
+#include "libs.h"
 
 typedef enum {
     STATE_WAITING,
@@ -92,7 +70,7 @@ typedef struct {
     port_state_t state;
     uint16_t src_port;
     uint32_t sent_seq;
-} capture_thread_args;
+} listner_args;
 
 struct pseudo_header {
     unsigned int source_address;
@@ -102,26 +80,3 @@ struct pseudo_header {
     unsigned short tcp_length;
     struct tcphdr tcp;
 };
-
-// function prototypes
-void print_help();
-void parse_args(int argc, char **argv, t_config *config);
-void parse_ports(t_config *config);
-void parse_scan_types(t_config *config);
-void run_scan(t_config *config);
-void *scan_thread(void *arg);
-void *capture_responses(void *arg);
-void *capture_responses_debug(void *arg);
-const char* find_interface_for_target(const char *target_ip);
-const char* get_interface_ip(const char *target_ip);
-void init_scan();
-void set_ip_header(struct iphdr *ip, const char *src_ip, struct sockaddr_in *target);
-unsigned short csum(unsigned short *ptr, int nbytes);
-void set_tcp_header(struct tcphdr *tcp, uint16_t src_port, struct sockaddr_in *target, uint32_t seq);
-void send_syn(int sock, struct sockaddr_in *target, const char *src_ip, 
-              uint16_t src_port, int dest_port);
-void process_packet(unsigned char *buffer, int size);
-void unblock_rst(int src_port);
-void *start_listner(void *arg);
-void *scan_thread(void *arg);
-uint16_t generate_source_port();
