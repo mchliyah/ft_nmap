@@ -14,7 +14,7 @@ static const t_option long_options[] = {
 void parse_args(int argc, char **argv, t_config *config) {
     
     if (argc < 2) {
-        fprintf(stderr, "Missing arguments. Use --help for usage.\n");
+        print_help();
         exit(1);
     }
     int opt;

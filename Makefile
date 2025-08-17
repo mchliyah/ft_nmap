@@ -8,7 +8,7 @@ INC_DIR     := include
 CC            := cc
 CFLAGS        := -Wall -Wextra -Werror
 DEBUG_FLAGS   := -g3 -O0 -fsanitize=address
-RELEASE_FLAGS := -O2
+RELEASE_FLAGS := #-O2
 LIBS          := -lpcap -lpthread
 
 # ===== Automatic File Detection =====

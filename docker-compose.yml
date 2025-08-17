@@ -1,0 +1,13 @@
+services:
+  ft_nmap:
+    image: ft_nmap
+    build: .
+    container_name: ft_nmap
+    privileged: true
+    volumes:
+      - .:/app
+    working_dir: /app
+    tty: true
+    stdin_open: true
+    network_mode: host
+    command: /bin/bash
