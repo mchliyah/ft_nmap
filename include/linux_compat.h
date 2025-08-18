@@ -7,12 +7,12 @@ extern int errno;
 #endif
 
 #ifdef __APPLE__
-// This file is for VS Code IntelliSense compatibility only
-// It won't be used during actual compilation in Docker
+// This file provides Linux compatibility structures for macOS compilation
 
 #include <stdint.h>
 
-// Linux-style IP header structure for IntelliSense
+// Linux-style IP header structure
+// Define our own struct to avoid conflicts with system headers
 struct iphdr {
     uint8_t ihl:4;
     uint8_t version:4;
@@ -27,8 +27,10 @@ struct iphdr {
     uint32_t daddr;
 };
 
-// Linux-style TCP header structure for IntelliSense  
-struct tcphdr {
+// Linux-style TCP header structure with Linux field names
+// We need to redefine this to have Linux-compatible field names
+#define tcphdr tcphdr_linux
+struct tcphdr_linux {
     uint16_t source;
     uint16_t dest;
     uint32_t seq;
