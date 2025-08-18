@@ -1,6 +1,15 @@
 #include "libs.h"
 
 typedef enum {
+    SCAN_SYN,
+    SCAN_ACK,
+    SCAN_FIN,
+    SCAN_NULL,
+    SCAN_XMAS,
+    SCAN_UDP
+} scan_type_t;
+
+typedef enum {
     STATE_WAITING,
     STATE_OPEN,
     STATE_CLOSED,
@@ -29,7 +38,8 @@ typedef enum {
     .cond = PTHREAD_COND_INITIALIZER, \
     .listner_thread_done = 0, \
     .scaner_on = 0, \
-    .scan_complete = 0 \
+    .scan_complete = 0, \
+    .scan_start_time = 0\
 }
 
 typedef struct {
@@ -54,6 +64,7 @@ typedef struct {
     int listner_thread_done;
     int scaner_on;
     int scan_complete;
+    time_t scan_start_time;
 } t_config;
 
 typedef struct {
@@ -70,7 +81,7 @@ typedef struct {
     port_state_t state;
     uint16_t src_port;
     uint32_t sent_seq;
-} listner_args;
+} capture_thread_args;
 
 struct pseudo_header {
     unsigned int source_address;

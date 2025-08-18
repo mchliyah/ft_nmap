@@ -1,235 +1,82 @@
 #include "../include/ft_nmap.h"
 
-// void *capture_responses(void *arg) {
-//     capture_thread_args *args = (capture_thread_args *)arg;
-//     const char *interface = find_interface_for_target(args->config->ip);
-//     char errbuf[PCAP_ERRBUF_SIZE];
-//     char filter[512];
-//     struct bpf_program fp;
-//     struct timeval start, now;
-//     const double timeout_seconds = 3.0;
+
+void process_packet(unsigned char *buffer, t_config *config) {
+    struct ip *ip = (struct ip *)buffer;
+    if (ip->ip_v != 4) {
+        printf("Not an IPv4 packet, skipping...\n");
+        return;
+    }
+
+    unsigned short iplen = ip->ip_hl * 4;
+    struct tcphdr *tcph;
+    memset(&tcph, 0, sizeof(tcph));
+    tcph = (struct tcphdr *)(buffer + iplen);
+
+    printf("syn %d\n", tcph->syn);
+    printf("ack %d\n", tcph->ack);
+    printf("ack %d\n", tcph->rst);    
     
-//     printf("starting capture on interface %s for port %d\n", interface, args->port);
-    
-//     pcap_t *handle = pcap_open_live(interface, 65536, 1, 1, errbuf);
-//     if (!handle) {
-//         fprintf(stderr, "Could not open %s: %s\n", interface, errbuf);
-//         free((void*)interface);
-//         free(args);
-//         return NULL;
-//     }
-
-//     const char *src_ip = get_interface_ip(args->config->ip);
-//     snprintf(filter, sizeof(filter), 
-//              "tcp and src host %s and dst host %s and dst port %d",
-//              args->config->ip, src_ip, args->src_port);
-    
-//     if (pcap_compile(handle, &fp, filter, 0, PCAP_NETMASK_UNKNOWN) == -1 ||
-//         pcap_setfilter(handle, &fp) == -1) {
-//         fprintf(stderr, "Filter error: %s\n", pcap_geterr(handle));
-//         pcap_close(handle);
-//         free((void*)interface);
-//         free(args);
-//         return NULL;
-//     }
-
-//     printf("Using filter: %s\n", filter);
-
-//     if (pcap_setnonblock(handle, 1, errbuf) == -1) {
-//         fprintf(stderr, "Could not set non-blocking mode: %s\n", errbuf);
-//     }
-
-//     gettimeofday(&start, NULL);
-
-//     while (args->state == STATE_WAITING) {
-//         struct pcap_pkthdr header;
-//         const u_char *packet = pcap_next(handle, &header);
-        
-//         gettimeofday(&now, NULL);
-//         double elapsed = (now.tv_sec - start.tv_sec) + 
-//                         (now.tv_usec - start.tv_usec) / 1000000.0;
-        
-//         if (elapsed > timeout_seconds) {
-//             pthread_mutex_lock(&args->config->mutex);
-//             if (args->state == STATE_WAITING) {
-//                 args->state = STATE_FILTERED;
-//                 printf("Port %d: FILTERED (timeout after %.1fs)\n", args->port, elapsed);
-//                 pthread_cond_signal(&args->config->cond);
-//             }
-//             pthread_mutex_unlock(&args->config->mutex);
-//             break;
-//         }
-        
-//         if (packet) {
-//             if (header.len < 14 + 20 + 20) {
-//                 continue;
-//             }
-
-//             struct iphdr *ip = (struct iphdr *)(packet + 14);
-//             struct tcphdr *tcp = (struct tcphdr *)(packet + 14 + (ip->ihl * 4));
-            
-//             uint32_t ack_num = ntohl(tcp->ack_seq);
-//             uint32_t expected_ack = args->sent_seq + 1;
-            
-//             printf("Received: src=%s:%d dst=%s:%d seq=%u ack=%u flags=[%s%s%s%s]\n",
-//                    inet_ntoa(*(struct in_addr*)&ip->saddr), ntohs(tcp->source),
-//                    inet_ntoa(*(struct in_addr*)&ip->daddr), ntohs(tcp->dest),
-//                    ntohl(tcp->seq), ack_num,
-//                    tcp->syn ? "SYN " : "",
-//                    tcp->ack ? "ACK " : "",
-//                    tcp->rst ? "RST " : "",
-//                    tcp->fin ? "FIN " : "");
-
-//             if (ntohs(tcp->source) == args->port && 
-//                 ntohs(tcp->dest) == args->src_port) {
-                
-//                 pthread_mutex_lock(&args->config->mutex);
-                
-//                 if (tcp->syn && tcp->ack) {
-//                     if (ack_num == expected_ack || ack_num == 0) {                         args->state = STATE_OPEN;
-//                         printf("Port %d: OPEN (SYN-ACK received)\n", args->port);
-//                     } else {
-//                         printf("Port %d: SYN-ACK with unexpected ack=%u (expected %u)\n", 
-//                                args->port, ack_num, expected_ack);
-//                         args->state = STATE_OPEN;
-//                     }
-//                 } else if (tcp->rst) {
-//                     args->state = STATE_CLOSED;
-//                     printf("Port %d: CLOSED (RST received)\n", args->port);
-//                 } else {
-//                     printf("Port %d: Unexpected response flags\n", args->port);
-//                 }
-                
-//                 pthread_cond_signal(&args->config->cond);
-//                 pthread_mutex_unlock(&args->config->mutex);
-//                 break;
-//             }
-//         }
-
-//         usleep(1000);
-//     }
-
-//     pcap_freecode(&fp);
-//     pcap_close(handle);
-//     free((void*)interface);
-//     return NULL;
-// }
+    if (tcph->syn && tcph->ack) {
+        printf("Port %d: OPEN\n", ntohs(tcph->source));
+        (void) config;
+        // Signal that we found an open port and can stop scanning
+        // config->scan_complete = 1;
+        // config->scaner_on = 0;
+    } else if (tcph->rst) {
+        printf("Port %d: CLOSED\n", ntohs(tcph->source));
+    }
+}
 
 
-void *capture_responses_debug(void *arg) {
-    capture_thread_args *args = (capture_thread_args *)arg;
-    const char *interface = find_interface_for_target(args->config->ip);
-    char errbuf[PCAP_ERRBUF_SIZE];
-    char filter[512];
-    struct bpf_program fp;
-    struct timeval start, now;
-    const double timeout_seconds = 5.0;
-    int packet_count = 0;
-    
-    printf("DEBUG: starting capture on interface %s for port %d\n", interface, args->port);
-    printf("DEBUG: Looking for responses from %s to our port %d\n", args->config->ip, args->src_port);
-    
-    pcap_t *handle = pcap_open_live(interface, 65536, 1, 1, errbuf);
-    if (!handle) {
-        fprintf(stderr, "Could not open %s: %s\n", interface, errbuf);
-        free((void*)interface);
-        free(args);
+void *start_listner(void *arg) {
+    t_config *config = (t_config *)arg;
+    int sock_raw = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
+    if (sock_raw < 0) {
+        perror("Sniffer socket failed");
         return NULL;
     }
 
-    const char *src_ip = get_interface_ip(args->config->ip);
-    snprintf(filter, sizeof(filter), "tcp");
-    // snprintf(filter, sizeof(filter), 
-        //  "tcp and src host %s and src port %d and dst host %s and dst port %d",
-        //  args->config->ip, args->port, src_ip, args->src_port);
-    
-    if (pcap_compile(handle, &fp, filter, 0, PCAP_NETMASK_UNKNOWN) == -1 ||
-        pcap_setfilter(handle, &fp) == -1) {
-        fprintf(stderr, "Filter error: %s\n", pcap_geterr(handle));
-        pcap_close(handle);
-        free((void*)interface);
-        free(args);
-        return NULL;
+    // Set socket timeout for recvfrom
+    struct timeval timeout;
+    timeout.tv_sec = 3;  // 1 second timeout
+    timeout.tv_usec = 0;
+    if (setsockopt(sock_raw, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+        perror("setsockopt timeout failed");
     }
 
-    printf("DEBUG: Using targeted filter: %s\n", filter); 
-    printf("DEBUG: Expected source IP: %s, source port: %d\n", src_ip, args->src_port);
-    printf("DEBUG: Target IP: %s, target port: %d\n", args->config->ip, args->port);
+    unsigned char buffer[65536];
+    struct sockaddr saddr;
+    socklen_t saddr_size = sizeof(saddr);
 
-    if (pcap_setnonblock(handle, 1, errbuf) == -1) {
-        fprintf(stderr, "Could not set non-blocking mode: %s\n", errbuf);
-    }
-
-    gettimeofday(&start, NULL);
-
-    while (args->state == STATE_WAITING && packet_count < 100) {
-        struct pcap_pkthdr header;
-        const u_char *packet = pcap_next(handle, &header);
+    config->scaner_on = 1;
+    printf("Global listener started...\n");
+    memset(buffer, 0, sizeof(buffer));
+    while (1) {
+        // Check for overall scan timeout (30 seconds)
+        int data_size = recvfrom(sock_raw, buffer, sizeof(buffer), 0, &saddr, &saddr_size);
         
-        gettimeofday(&now, NULL);
-        double elapsed = (now.tv_sec - start.tv_sec) + 
-                        (now.tv_usec - start.tv_usec) / 1000000.0;
-        
-        if (elapsed > timeout_seconds) {
-            printf("DEBUG: Timeout reached after %.1fs, captured %d packets\n", elapsed, packet_count);
-            pthread_mutex_lock(&args->config->mutex);
-            if (args->state == STATE_WAITING) {
-                args->state = STATE_FILTERED;
-                printf("Port %d: FILTERED (timeout after %.1fs)\n", args->port, elapsed);
-                pthread_cond_signal(&args->config->cond);
-            }
-            pthread_mutex_unlock(&args->config->mutex);
+        // printf("buffer : %s\n", buffer);
+        if (config->scan_start_time > 0 && (time(NULL) - config->scan_start_time) > 30) {
+            printf("Global listener: Scan timeout reached (30 seconds)\n");
+            config->scaner_on = 0;
+            // config->scan_complete = 1;
             break;
         }
-        
-        if (packet) {
-            packet_count++;
-            printf("DEBUG: Captured packet %d, length: %d bytes\n", packet_count, header.len);
-            if (header.len < 14 + 20 + 20) {
+
+        if (data_size < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+
+                // Timeout occurred, continue loop to check other conditions
                 continue;
             }
-
-            struct iphdr *ip = (struct iphdr *)(packet + 14);
-            struct tcphdr *tcp = (struct tcphdr *)(packet + 14 + (ip->ihl * 4));
-            
-            char src_ip_str[INET_ADDRSTRLEN];
-            char dst_ip_str[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &ip->saddr, src_ip_str, INET_ADDRSTRLEN);
-            inet_ntop(AF_INET, &ip->daddr, dst_ip_str, INET_ADDRSTRLEN);
-            
-            printf("DEBUG[%d]: %s:%d -> %s:%d flags=[%s%s%s%s] seq=%u ack=%u\n",
-                   packet_count, src_ip_str, ntohs(tcp->source),
-                   dst_ip_str, ntohs(tcp->dest),
-                   tcp->syn ? "SYN " : "",
-                   tcp->ack ? "ACK " : "",
-                   tcp->rst ? "RST " : "",
-                   tcp->fin ? "FIN " : "",
-                   ntohl(tcp->seq), ntohl(tcp->ack_seq));
-
-            //TODO: the DEBUG above show that we are receiving a response to our scan SYN-ACK but it is not seting the port as open here ??
-            pthread_mutex_lock(&args->config->mutex);
-            if (tcp->syn && tcp->ack) {
-                args->state = STATE_OPEN;
-                printf("Port %d: OPEN (SYN-ACK received)\n", args->port);
-                pthread_cond_signal(&args->config->cond);
-                pthread_mutex_unlock(&args->config->mutex);
-                break;
-            } else if (tcp->rst) {
-                args->state = STATE_CLOSED;
-                printf("Port %d: CLOSED (RST received)\n", args->port);
-                pthread_cond_signal(&args->config->cond);
-                pthread_mutex_unlock(&args->config->mutex);
-                break;
-            }
-            pthread_mutex_unlock(&args->config->mutex);
+            if (config->scaner_on) perror("recvfrom failed");
+            break;
         }
-
-        usleep(1000);
+        process_packet(buffer, config);
     }
-
-    printf("DEBUG: Capture finished, total packets: %d\n", packet_count);
-    pcap_freecode(&fp);
-    pcap_close(handle);
-    free((void*)interface);
+    
+    printf("Global listener stopped.\n");
+    close(sock_raw);
     return NULL;
 }

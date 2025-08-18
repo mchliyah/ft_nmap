@@ -1,6 +1,7 @@
 #include "../include/ft_nmap.h"
 
 void print_help(void) {
+
     printf("Usage: ./ft_nmap [OPTIONS]\n");
     printf("Options:\n");
     printf("  --help\t\t\tShow this help message\n");
@@ -14,7 +15,7 @@ void print_help(void) {
 
 int main(int argc, char **argv) {
 
-    //TODO: time scaning
+    //TODO: time scaning i think we may need to add a global struct config to oass it everytime 
 
     t_config config = INIT_CONFIG();
     // t_config config;

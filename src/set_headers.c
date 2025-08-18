@@ -28,33 +28,41 @@ uint16_t generate_source_port() {
     return 32768 + (rand() % 28232); // Nmap's range
 }
 
-void set_ip_header(struct iphdr *ip, const char *src_ip, struct sockaddr_in *target) {
-    ip->ihl = 5;
-    ip->version = 4;
-    ip->tos = 0;
-    ip->tot_len = htons(sizeof(struct iphdr) + sizeof(struct tcphdr));
-    ip->id = htons(rand() & 0xFFFF);
-    ip->frag_off = 0;
-    ip->ttl = 64;
-    ip->protocol = IPPROTO_TCP;
-    ip->saddr = inet_addr(src_ip);
-    ip->daddr = target->sin_addr.s_addr;
-    ip->check = 0;
+void set_ip_header(struct ip *ip, const char *src_ip, struct sockaddr_in *target) {
+    ip->ip_hl = sizeof(*ip) >> 2;
+    ip->ip_v = 4;
+    ip->ip_tos = 0;
+    ip->ip_len = sizeof(struct ip) + sizeof(struct tcphdr);
+    ip->ip_id = htons(rand() & 0xFFFF);
+    ip->ip_off = htons(16384);
+    ip->ip_ttl = 64;
+    ip->ip_p = IPPROTO_TCP;
+    ip->ip_src.s_addr = inet_addr(src_ip);
+    ip->ip_dst = target->sin_addr;
+    ip->ip_sum = csum((u_short *)ip, ip->ip_len >> 1);
 }
 
-void set_tcp_header(struct tcphdr *tcp, uint16_t src_port, struct sockaddr_in *target, uint32_t seq) {
-    tcp->source = htons(src_port);
-    tcp->dest = target->sin_port;
-    tcp->seq = htonl(seq);
+void set_tcp_header(struct tcphdr *tcp, scan_type_t target_type) {
+
     tcp->ack_seq = 0;
-    tcp->doff = 6;
-    tcp->syn = 1;
-    tcp->ack = 0;
-    tcp->fin = 0;
-    tcp->rst = 0;
-    tcp->psh = 0;
-    tcp->urg = 0;
-    tcp->window = htons(1024);
-    tcp->check = 0; 
-    tcp->urg_ptr = 0;
+ 	tcp->source = htons(43591);
+	tcp->dest = htons(80);
+	tcp->seq = htonl(1105024978);
+	tcp->window = htons(14600);
+	tcp->doff = sizeof(struct tcphdr) / 4;
+	tcp->fin = (target_type & SCAN_FIN ) ? 1 : 0;
+	tcp->syn = (target_type & SCAN_SYN) ? 1 : 0;
+	tcp->ack = (target_type & SCAN_ACK) ? 1 : 0;
+    // tcp->xmas = (target_type & SCAN_XMAS) ? 1 : 0; haha there is no xmas in tcp header and udp and null 
+    // tcp->udp = (target_type & SCAN_UDP) ? 1 : 0;
+    // tcp->null = (target_type & SCAN_NULL) ? 1 : 0;
+    // tcp->psh = (target_type & SCAN_PSH) ? 1 : 0;
+    // tcp->rst = (target_type & SCAN_RST) ? 1 : 0;
+    // tcp->urg = (target_type & SCAN_URG) ? 1 : 0;
+    tcp->res1 = 0;
+    tcp->res2 = 0;
+    tcp->check = 0;
+	tcp->rst = 0;
+	tcp->check = 0;
+	tcp->urg_ptr = 0;
 }
