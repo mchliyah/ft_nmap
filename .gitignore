@@ -17,3 +17,8 @@ obj/
 *.swo
 .vscode/
 .idea/
+
+# unwanted files
+get_interface_tocheck
+out
+test.c
