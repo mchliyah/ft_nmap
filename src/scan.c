@@ -1,42 +1,146 @@
 #include "../include/ft_nmap.h"
 
+void start_thread_listner(pthread_t *global_listener) {
+    // This function will handle incoming packets and update the scan results
+    // It should be implemented to listen for responses from the target IPs
+    puts("Starting global listener thread...");
+    if (pthread_create(global_listener, NULL, start_listner, NULL) != 0) {
+        perror("Failed to create global listener thread");
+        exit(EXIT_FAILURE);
+    }
+    puts("Global listener thread started successfully.");
+}
 
-void run_scan(t_config *config) {
-    parse_ports(config);
-    parse_scan_types(config);
 
-    // Validate and clamp thread count
-    config->speedup = (config->speedup < 1) ? 1 : 
-                     (config->speedup > 250) ? 250 : config->speedup;
+void send_packets(pthread_t *threads, scan_thread_data *thread_data) {
 
-    pthread_t threads[config->speedup];
-    scan_thread_data thread_data[config->speedup];
-    
-    // Calculate ports per thread
-    int ports_per_thread = config->port_count / config->speedup;
-    int remaining_ports = config->port_count % config->speedup;
+    // This function will send packets to the target IPs using multiple threads
+
+    puts(" ==================== Starting packet sender threads...");
+    int ports_per_thread = g_config.port_count / g_config.speedup;
+    int remaining_ports = g_config.port_count % g_config.speedup;
     int current_port = 0;
+    int thread_created = 0;
 
-    printf("Starting scan with %d threads on %d ports...\n", 
-          config->speedup, config->port_count);
-    for (int i = 0; i < config->speedup; i++) {
+    //set socket to send all packets
+    int sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
+    if (sock < 0) {
+        perror("socket");
+        exit(EXIT_FAILURE);
+    }
+
+	int		on;
+	on = 1;
+	// Tell the Kernel that headers are included in the packet
+	if (setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof (on)) < 0)
+	{
+		perror("setsockopt");
+		exit(EXIT_FAILURE);
+	}
+
+    fprintf(stderr, "before loop creation speedup %d\n", g_config.speedup);
+    for (int i = 0; i < g_config.speedup; i++) {
         thread_data[i] = (scan_thread_data){
+            .sock = sock,
             .thread_id = i,
-            .config = config,
-            .start_port = current_port,
-            .end_port = current_port + ports_per_thread + (i < remaining_ports ? 1 : 0)
+            .start_range = current_port,
+            .end_range = current_port + ports_per_thread + (i < remaining_ports ? 1 : 0)
         };
-        
         if (pthread_create(&threads[i], NULL, scan_thread, &thread_data[i]) != 0) {
             perror("pthread_create");
             exit(EXIT_FAILURE);
         }
-        
-        current_port = thread_data[i].end_port;
+        thread_created++;
+        current_port = thread_data[i].end_range;
     }
-    for (int i = 0; i < config->speedup; i++) {
+    close(sock);
+    printf("Total threads created: %d\n", thread_created);
+}
+
+
+void cleanup(pthread_t *threads, pthread_t global_listener) {
+    // Cleanup resources after scan completion
+    for (int i = 0; i < g_config.speedup; i++) {
+        pthread_cancel(threads[i]);
         pthread_join(threads[i], NULL);
     }
+    
+    pthread_cancel(global_listener);
+    pthread_join(global_listener, NULL);
 
-    printf("Scan completed!\n");
+    // Free allocated memory for ports and scan types
+    t_port *current = g_config.port_list;
+    while (current) {
+        t_port *next = current->next;
+        free(current);
+        current = next;
+    }
+    
+    if (g_config.scan_types) {
+        for (int i = 0; i < g_config.scan_type_count; i++) {
+            if (g_config.scan_types[i]) {
+                free(g_config.scan_types[i]);
+            }
+        }
+        free(g_config.scan_types);
+    }
+}
+
+void timeout_scan_result( pthread_t global_listener) {
+
+        if (!g_config.scan_complete) {
+        int additional_wait = 5;
+        time_t wait_start = time(NULL);
+
+        while (!g_config.scan_complete && (time(NULL) - wait_start) < additional_wait) {
+            if ((time(NULL) - g_config.scan_start_time) > 30) {
+                printf("Overall timeout reached\n");
+                break;
+            }
+            usleep(100000);
+        }
+    }
+
+    time_t elapsed = time(NULL) - g_config.scan_start_time;
+    if (g_config.scan_complete) {
+        printf("Scan completed - open port found in %ld seconds\n", elapsed);
+    } else if (elapsed >= 30) {
+        printf("Scan completed - timeout reached after %ld seconds\n", elapsed);
+        pthread_cancel(global_listener);
+        // pthread_join(global_listener, NULL);
+        // printf("Scan listener thread cancelled due to timeout.\n");
+        // g_config.scan_complete = 1; // Mark scan as complete to exit threads
+        // pthread_cond_broadcast(&g_config.cond); // Notify all threads to exit
+        // cleanup(threads, global_listener, thread_data);
+        return;
+    } else {
+        printf("Scan completed - no open ports found in %ld seconds\n", elapsed);
+    }
+}
+
+
+void run_scan() {
+
+    // init threads 
+    pthread_t global_listener;
+    pthread_t threads[g_config.speedup];
+    scan_thread_data thread_data[g_config.speedup];
+
+
+    //start the thread listner 
+    start_thread_listner(&global_listener);
+    usleep(50000);
+    // threads chunk sender
+    send_packets(threads, thread_data);
+    printf("Waiting for scanning threads to complete...\n");
+    for (int i = 0; i < g_config.speedup; i++) {
+        pthread_join(threads[i], NULL);
+        printf("Thread %d completed\n", i);
+    }
+    printf("All scanning threads completed\n");
+
+    // Handle timeout and results
+    timeout_scan_result(global_listener);
+    cleanup(threads, global_listener);
+
 }

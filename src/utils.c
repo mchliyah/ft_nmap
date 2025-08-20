@@ -1,28 +1,5 @@
 #include "../include/ft_nmap.h"
 
-void block_rst(int src_port) {
-    char cmd[256];
-    snprintf(cmd, sizeof(cmd),
-             "iptables -A OUTPUT -p tcp --tcp-flags RST RST "
-             "--sport %d -j DROP",
-             src_port);
-    int s = system(cmd);
-    if (s == -1)
-        return;
-}
-
-void unblock_rst(int src_port) {
-    char cmd[256];
-    snprintf(cmd, sizeof(cmd),
-             "iptables -D OUTPUT -p tcp --tcp-flags RST RST "
-             "--sport %d -j DROP",
-             src_port);
-    int s = system(cmd);
-    if (s == -1)
-        return;
-}
-
-
 const char* get_interface_ip(const char *target_ip) {
     struct ifaddrs *ifaddr, *ifa;
     uint32_t target = inet_addr(target_ip);
@@ -113,4 +90,29 @@ const char* find_interface_for_target(const char *target_ip) {
 
     freeifaddrs(ifaddr);
     return best_iface ? best_iface : strdup("eth0");
+}
+
+void add_port(int port, scan_type_t scan_type) {
+    t_port *new_port = malloc(sizeof(t_port));
+    if (!new_port) {
+        perror("Failed to allocate memory for new port");
+        exit(EXIT_FAILURE);
+    }
+    new_port->port = port;
+    new_port->state = STATE_WAITING;
+    new_port->scan_type = scan_type;
+    new_port->next = NULL;
+
+    pthread_mutex_lock(&g_config.mutex);
+    if (!g_config.port_list) {
+        g_config.port_list = new_port;
+    } else {
+        t_port *current = g_config.port_list;
+        while (current->next) {
+            current = current->next;
+        }
+        current->next = new_port;
+    }
+    g_config.port_count++;
+    pthread_mutex_unlock(&g_config.mutex);
 }
