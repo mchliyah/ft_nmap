@@ -39,30 +39,30 @@ void set_ip_header(struct ip *ip, const char *src_ip, struct sockaddr_in *target
     ip->ip_p = IPPROTO_TCP;
     ip->ip_src.s_addr = inet_addr(src_ip);
     ip->ip_dst = target->sin_addr;
-    ip->ip_sum = csum((u_short *)ip, ip->ip_len >> 1);
 }
 
 void set_tcp_header(struct tcphdr *tcp, scan_type_t target_type) {
 
-    tcp->ack_seq = 0;
- 	tcp->source = htons(43591);
-	tcp->dest = htons(80);
+
+    tcp->source = htons(43591);
+	tcp->dest = htons(80); // default set to 80 thread scan will handle based on range
 	tcp->seq = htonl(1105024978);
-	tcp->window = htons(14600);
+	tcp->ack_seq = 0;
 	tcp->doff = sizeof(struct tcphdr) / 4;
-	tcp->fin = (target_type & SCAN_FIN ) ? 1 : 0;
+	tcp->fin = (target_type & SCAN_FIN) ? 1 : 0;
+	tcp->rst = 0;
 	tcp->syn = (target_type & SCAN_SYN) ? 1 : 0;
 	tcp->ack = (target_type & SCAN_ACK) ? 1 : 0;
-    // tcp->xmas = (target_type & SCAN_XMAS) ? 1 : 0; haha there is no xmas in tcp header and udp and null 
-    // tcp->udp = (target_type & SCAN_UDP) ? 1 : 0;
-    // tcp->null = (target_type & SCAN_NULL) ? 1 : 0;
-    // tcp->psh = (target_type & SCAN_PSH) ? 1 : 0;
-    // tcp->rst = (target_type & SCAN_RST) ? 1 : 0;
-    // tcp->urg = (target_type & SCAN_URG) ? 1 : 0;
-    tcp->res1 = 0;
-    tcp->res2 = 0;
-    tcp->check = 0;
-	tcp->rst = 0;
+	tcp->window = htons(14600);
 	tcp->check = 0;
 	tcp->urg_ptr = 0;
+}
+
+void set_psudo_header(struct pseudo_header *psh, const char *src_ip, struct sockaddr_in *target)
+{
+    psh->source_address = inet_addr(src_ip);
+    psh->dest_address = target->sin_addr.s_addr;
+    psh->placeholder = 0;
+    psh->protocol = IPPROTO_TCP;
+    psh->tcp_length = htons(sizeof(struct tcphdr));
 }

@@ -1,102 +1,84 @@
 #include "../include/ft_nmap.h"
 
+void send_syn(int sock, struct sockaddr_in *target, char *datagram) {
 
-void init_scan() {
-    srand(time(NULL));
-}
+    pthread_mutex_lock(&g_config.mutex);
+    if (sendto(sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr), 0,
+               (struct sockaddr *)target, sizeof(*target)) < 0) {
+        perror("sendto");
+    } else {
+        printf("Packet sent successfully\n");
+    }
+    pthread_mutex_unlock(&g_config.mutex);
+    }
 
-void send_syn(int sock, struct sockaddr_in *target, const char *src_ip, int dest_port) {
+void *scan_thread(void *arg) {
+
+    puts("Starting scan thread...");
+    scan_thread_data *data = (scan_thread_data *)arg;
     char datagram[4096] = {0};
     struct ip *ip = (struct ip *)datagram;
     struct tcphdr *tcp = (struct tcphdr *)(datagram + sizeof(struct ip));
     struct pseudo_header psh;
-
-    set_ip_header(ip, src_ip, target);
-    set_tcp_header(tcp, SCAN_SYN);
-
-    // Add TCP options (MSS)
-    uint8_t *options = (uint8_t *)(tcp + 1);
-    options[0] = 0x02;  // MSS option kind
-    options[1] = 0x04;  // Length
-    *(uint16_t *)(options + 2) = htons(1460);  // MSS value
-
-    // ip->check = csum((unsigned short *)datagram, sizeof(struct ip) >> 1);
-    // tcp->source = htons(src_port);
-    tcp->dest = htons(dest_port);
-
-    // Build pseudo-header for TCP checksum
-    psh.source_address = inet_addr(src_ip);
-    psh.dest_address = ip->ip_dst.s_addr;
-    psh.placeholder = 0;
-    psh.protocol = IPPROTO_TCP;
-    psh.tcp_length = htons(sizeof(struct tcphdr));
-    
-    memcpy(&psh.tcp, tcp, sizeof(struct tcphdr));
-
-    // Calculate TCP checksum
-    tcp->check = csum((unsigned short *)&psh, sizeof(struct pseudo_header));
-    
-
-    // Send packet
-    if (sendto(sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr), 0,
-               (struct sockaddr *)target, sizeof(*target)) < 0) {
-        perror("sendto");
+    const char *src_ip = get_interface_ip(g_config.ip);
+    t_port *current = g_config.port_list;
+    // go to the start port
+    while (current && current->port < data->start_range) {
+        current = current->next;
     }
-}
+    int port = current->port;
 
+    struct sockaddr_in target = {
+        .sin_family = AF_INET,
+        .sin_port = htons(port),
+        .sin_addr = { .s_addr = inet_addr(g_config.ip) }
+    };
+    // uint16_t src_port = generate_source_port();
 
-
-void *scan_thread(void *arg) {
-    scan_thread_data *data = (scan_thread_data *)arg;
-    const char *src_ip = get_interface_ip(data->config->ip);
-
-    printf("Thread %d: scanning ports %d to %d\n", 
-           data->thread_id, 
-           data->config->port_list[data->start_port],
-           data->config->port_list[data->end_port - 1]);
-
-    // Send SYN packets for assigned port range
-    for (int i = data->start_port; i < data->end_port && !data->config->scan_complete; i++) {
+    if (!data) {
+        fprintf(stderr, "Invalid thread data\n");
+        pthread_exit(NULL);
+    }
+    fprintf(stderr, "Thread %d: Scanning ports from %d to %d\n", data->thread_id, data->start_range, data->end_range);
+    set_ip_header(ip, src_ip, &target);
+    set_tcp_header(tcp, current ? current->scan_type : SCAN_SYN);
+    
+    fprintf(stderr, "==================================\n");
+    // printing curent conditions befor the loop
+    printf("curent port: %d, start_range: %d, end_range: %d, scan_complete: %d\n",
+        current ? current->port : -1, data->start_range, data->end_range, g_config.scan_complete);
+        fprintf(stderr, "==================================\n");
+    while (current && data->start_range <= data->end_range && !g_config.scan_complete) {
+        tcp->dest = htons(current->port);
+        set_psudo_header(&psh, src_ip, &target);
+        memcpy(&psh.tcp, tcp, sizeof(struct tcphdr));
+        ip->ip_dst = target.sin_addr;
+        ip->ip_sum = csum((u_short *)ip, ip->ip_len >> 1);
+        tcp->check = csum((unsigned short *)&psh, sizeof(struct pseudo_header));
         // Check for timeout before each port scan
-        printf("curent port : %d \n", i);
-        if (data->config->scan_start_time > 0 && (time(NULL) - data->config->scan_start_time) > 30) {
+        fprintf(stderr, "==================================\n");
+        if (g_config.scan_start_time > 0 && (time(NULL) - g_config.scan_start_time) > 30) {
             printf("Thread %d: Scan timeout reached during port scanning\n", data->thread_id);
             break;
         }
-
-        int port = data->config->port_list[i];
+        // Send SYN packet
+        printf("Thread %d: Sending SYN to %s:%d from %s\n", data->thread_id, g_config.ip, port, src_ip);
         
-        struct sockaddr_in target = {
-            .sin_family = AF_INET,
-            .sin_port = htons(port),
-            .sin_addr = { .s_addr = inet_addr(data->config->ip) }
-        };
-        // create socket 
-        int sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
-        if (sock < 0) {
-            perror("socket");
-            continue;
-        }
-        // headers information
-        int one = 1;
-        if (setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &one, sizeof(one))) {
-            perror("setsockopt");
-            close(sock);
-            continue;
-        }
-        
-        // Send SYN packet with MSS option
-        send_syn(sock, &target, src_ip, port);
-        close(sock);
-        
+        // Print debug information - fix inet_ntoa static buffer issue
+        char src_ip_str[INET_ADDRSTRLEN], dst_ip_str[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &ip->ip_src, src_ip_str, INET_ADDRSTRLEN);
+        inet_ntop(AF_INET, &ip->ip_dst, dst_ip_str, INET_ADDRSTRLEN);
+        printf("IP Header 79 : src=%s, dst=%s, len=%d\n", src_ip_str, dst_ip_str, ntohs(ip->ip_len));
+        // Send packet
+        send_syn(data->sock, &target, datagram);
         // Small delay to avoid flooding
         usleep(1000); // 1ms delay between packets
-        
-        // Check if we should stop scanning (open port found)
-        if (data->config->scan_complete) {
-            printf("Thread %d: Scan completed - open port found\n", data->thread_id);
-            break;
-        }
+
+
+        // Move to the next port in the linked list
+        pthread_mutex_lock(&g_config.mutex);
+        current = current->next;
+        pthread_mutex_unlock(&g_config.mutex);
     }
 
     printf("Thread %d: finished sending packets\n", data->thread_id);

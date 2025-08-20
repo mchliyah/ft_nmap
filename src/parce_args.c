@@ -11,7 +11,7 @@ static const t_option long_options[] = {
     {NULL, 0, NULL, 0}
 };
 
-void parse_args(int argc, char **argv, t_config *config) {
+void parse_args(int argc, char **argv) {
     
     if (argc < 2) {
         print_help();
@@ -22,16 +22,16 @@ void parse_args(int argc, char **argv, t_config *config) {
            (struct option *)long_options, NULL)) != -1) {
         switch (opt) {
             case 'h': print_help(); exit(0);
-            case 'i': config->ip = optarg; break;
-            case 'p': config->ports = optarg; break;
-            case 'f': config->file = optarg; break;
-            case 's': config->scans = optarg; break;
-            case 'S': config->speedup = atoi(optarg); break;
+            case 'i': g_config.ip = optarg; break;
+            case 'p': g_config.ports = optarg; break;
+            case 'f': g_config.file = optarg; break;
+            case 's': g_config.scans = optarg; break;
+            case 'S': g_config.speedup = atoi(optarg); break;
             default: print_help(); exit(1);
         }
     }
     // Validation
-    if (!config->ip && !config->file) {
+    if (!g_config.ip && !g_config.file) {
         fprintf(stderr, "Specify --ip or --file\n");
         exit(1);
     }
