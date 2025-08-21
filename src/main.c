@@ -8,7 +8,7 @@ void init_scan() {
     g_config.speedup = (g_config.speedup < 1) ? 1 : 
     (g_config.speedup > 250) ? 250 : g_config.speedup;
 
-    printf("config speedup = %d\n", g_config.speedup);
+    printf("config speedup = %d\n end config !\n\n\n", g_config.speedup);
 
     srand(time(NULL));
     g_config.scan_start_time = time(NULL);
