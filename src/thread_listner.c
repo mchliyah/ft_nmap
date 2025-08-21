@@ -11,7 +11,7 @@ void process_packet(u_char *user, const struct pcap_pkthdr *header, const u_char
     u_short iplen;
 
     // Ensure the packet is an IP packet
-    puts("Processing packet...");
+    // puts("Processing packet...");
     if (ntohs(ethh->ether_type) != ETHERTYPE_IP)
     {
         printf("Non-IP packet captured, skipping...\n");
@@ -37,22 +37,22 @@ void process_packet(u_char *user, const struct pcap_pkthdr *header, const u_char
     tcph = (struct tcphdr *)(buffer + sizeof(struct ether_header) + iplen);
 
     // Print debug information - fix inet_ntoa static buffer issue
-    char src_ip_str[INET_ADDRSTRLEN], dst_ip_str[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &iph->ip_src, src_ip_str, INET_ADDRSTRLEN);
-    inet_ntop(AF_INET, &iph->ip_dst, dst_ip_str, INET_ADDRSTRLEN);
-    printf("IP Header 38 : src=%s, dst=%s, len=%d\n", src_ip_str, dst_ip_str, ntohs(iph->ip_len));
+    // char src_ip_str[INET_ADDRSTRLEN], dst_ip_str[INET_ADDRSTRLEN];
+    // inet_ntop(AF_INET, &iph->ip_src, src_ip_str, INET_ADDRSTRLEN);
+    // inet_ntop(AF_INET, &iph->ip_dst, dst_ip_str, INET_ADDRSTRLEN);
+    // printf("IP Header 38 : src=%s, dst=%s, len=%d\n", src_ip_str, dst_ip_str, ntohs(iph->ip_len));
 
     // Process the packet
     pthread_mutex_lock(&g_config.mutex);
     t_port *current = g_config.port_list;
     while (current)
     {
-        if (ntohs(tcph->dest) == current->port)
+        if (ntohs(tcph->source) == current->port)
         {
             // Print debug information - fix inet_ntoa static buffer issue
-            printf("TCP Header 46 : src_port=%d, dst_port=%d, seq=%u, ack_seq=%u, flags=0x%x\n",
-                   ntohs(tcph->source), ntohs(tcph->dest), ntohl(tcph->seq), ntohl(tcph->ack_seq),
-                   (tcph->syn << 1) | (tcph->ack << 4) | (tcph->fin << 0));
+            // printf("TCP Header 46 : src_port=%d, dst_port=%d, seq=%u, ack_seq=%u, flags=0x%x\n",
+            //        ntohs(tcph->source), ntohs(tcph->dest), ntohl(tcph->seq), ntohl(tcph->ack_seq),
+            //        (tcph->syn << 1) | (tcph->ack << 4) | (tcph->fin << 0));
 
             if (tcph->syn && tcph->ack)
             {
@@ -64,11 +64,11 @@ void process_packet(u_char *user, const struct pcap_pkthdr *header, const u_char
                 printf("Port %d: CLOSED\n", current->port);
                 current->state = STATE_CLOSED;
             }
-            else
-            {
-                printf("Port %d: UNKNOWN RESPONSE\n", current->port);
-            }
-            break; // Stop after finding the matching port
+            // else
+            // {
+            //     printf("Port %d: UNKNOWN RESPONSE\n", current->port);
+            // }
+            // break; // Stop after finding the matching port
         }
         current = current->next;
     }
@@ -90,7 +90,7 @@ void *start_listner()
         fprintf(stderr, "No valid interface found for target IP %s\n", g_config.ip);
         return NULL;
     }
-    printf("Using interface: %s\n", interface);
+    // printf("Using interface: %s\n", interface);
 
     if (pcap_lookupnet(interface, &netmask, &mask, errbuf) == -1)
     {
@@ -106,9 +106,9 @@ void *start_listner()
     }
 
     // set filter to catch incoming packets not outgoing
-
-    snprintf(filter_exp, 100, "((tcp) and (dst host %s))", g_config.src_ip);
-    fprintf(stderr, "Using filter: %s\n", filter_exp);
+    snprintf(filter_exp, 100, "tcp and dst host %s", g_config.src_ip);
+    // snprintf(filter_exp, 100, "((tcp) and (dst host %s))", g_config.src_ip);
+    // fprintf(stderr, "Using filter: %s\n\n", filter_exp);
     if (pcap_compile(handle, &fp, filter_exp, 0, netmask) == -1)
     {
         fprintf(stderr, "Couldn't parse filter %s: %s\n",
@@ -126,9 +126,9 @@ void *start_listner()
     int timeout_count = 0;
     while (g_config.scaner_on)
     {
-        printf("Waiting for packets...\n");
+        // printf("Waiting for packets...\n");
         int pd = pcap_dispatch(handle, -1, &process_packet, NULL);
-        printf("pcap_dispatch returned %d\n", pd);
+        // printf("pcap_dispatch returned %d\n", pd);
         if (pd == 0)
         {
             timeout_count++;

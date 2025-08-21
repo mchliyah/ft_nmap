@@ -3,42 +3,26 @@
 void start_thread_listner(pthread_t *global_listener) {
     // This function will handle incoming packets and update the scan results
     // It should be implemented to listen for responses from the target IPs
-    puts("Starting global listener thread...");
+    // puts("Starting global listener thread...");
     if (pthread_create(global_listener, NULL, start_listner, NULL) != 0) {
         perror("Failed to create global listener thread");
         exit(EXIT_FAILURE);
     }
-    puts("Global listener thread started successfully.");
+    // puts("Global listener thread started successfully.");
 }
 
 
-void send_packets(pthread_t *threads, scan_thread_data *thread_data) {
+void send_packets(int sock, pthread_t *threads, scan_thread_data *thread_data) {
 
     // This function will send packets to the target IPs using multiple threads
 
-    puts(" ==================== Starting packet sender threads...");
+    // puts(" ==================== Starting packet sender threads...");
     int ports_per_thread = g_config.port_count / g_config.speedup;
     int remaining_ports = g_config.port_count % g_config.speedup;
     int current_port = 0;
     int thread_created = 0;
 
-    //set socket to send all packets
-    int sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
-    if (sock < 0) {
-        perror("socket");
-        exit(EXIT_FAILURE);
-    }
-
-	int		on;
-	on = 1;
-	// Tell the Kernel that headers are included in the packet
-	if (setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof (on)) < 0)
-	{
-		perror("setsockopt");
-		exit(EXIT_FAILURE);
-	}
-
-    fprintf(stderr, "before loop creation speedup %d\n", g_config.speedup);
+    // fprintf(stderr, "before loop creation speedup %d\n", g_config.speedup);
     for (int i = 0; i < g_config.speedup; i++) {
         thread_data[i] = (scan_thread_data){
             .sock = sock,
@@ -53,17 +37,17 @@ void send_packets(pthread_t *threads, scan_thread_data *thread_data) {
         thread_created++;
         current_port = thread_data[i].end_range;
     }
-    close(sock);
     printf("Total threads created: %d\n", thread_created);
 }
 
 
 void cleanup(pthread_t *threads, pthread_t global_listener) {
+    (void)threads;
     // Cleanup resources after scan completion
-    for (int i = 0; i < g_config.speedup; i++) {
-        pthread_cancel(threads[i]);
-        pthread_join(threads[i], NULL);
-    }
+    // for (int i = 0; i < g_config.speedup; i++) {
+    //     pthread_cancel(threads[i]);
+    //     pthread_join(threads[i], NULL);
+    // }
     
     pthread_cancel(global_listener);
     pthread_join(global_listener, NULL);
@@ -91,7 +75,10 @@ void timeout_scan_result( pthread_t global_listener) {
         if (!g_config.scan_complete) {
         int additional_wait = 5;
         time_t wait_start = time(NULL);
+        while(1)
+        {
 
+        }
         while (!g_config.scan_complete && (time(NULL) - wait_start) < additional_wait) {
             if ((time(NULL) - g_config.scan_start_time) > 30) {
                 printf("Overall timeout reached\n");
@@ -118,6 +105,23 @@ void timeout_scan_result( pthread_t global_listener) {
     }
 }
 
+int set_socket(){
+
+    int sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
+    if (sock < 0) {
+        perror("socket");
+        exit(EXIT_FAILURE);
+    }
+
+    //set socket to send all packets
+    int on = 1;
+    if (setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
+    }
+
+    return sock;
+}
 
 void run_scan() {
 
@@ -131,13 +135,16 @@ void run_scan() {
     start_thread_listner(&global_listener);
     usleep(50000);
     // threads chunk sender
-    send_packets(threads, thread_data);
-    printf("Waiting for scanning threads to complete...\n");
+    int sock = set_socket();
+    send_packets(sock, threads, thread_data);
+    // printf("Waiting for scanning threads to complete...\n");
     for (int i = 0; i < g_config.speedup; i++) {
         pthread_join(threads[i], NULL);
         printf("Thread %d completed\n", i);
     }
-    printf("All scanning threads completed\n");
+
+    close(sock);
+    // printf("All scanning threads completed\n");
 
     // Handle timeout and results
     timeout_scan_result(global_listener);
