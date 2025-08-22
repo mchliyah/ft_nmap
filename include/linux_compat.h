@@ -27,27 +27,37 @@ struct iphdr {
     uint32_t daddr;
 };
 
-// Linux-style TCP header structure with Linux field names
-// We need to redefine this to have Linux-compatible field names
+// Linux-style TCP header structure with both BSD and Linux field names
+// We need to redefine this to have compatible field names for both styles
 #define tcphdr tcphdr_linux
 struct tcphdr_linux {
-    uint16_t source;
-    uint16_t dest;
-    uint32_t seq;
-    uint32_t ack_seq;
+    uint16_t th_sport;   // source port (BSD style) - also accessible as 'source'
+    uint16_t th_dport;   // destination port (BSD style) - also accessible as 'dest'
+    uint32_t th_seq;     // sequence number (BSD style) - also accessible as 'seq'
+    uint32_t th_ack;     // acknowledgment number (BSD style) - also accessible as 'ack_seq'
     uint16_t res1:4;
-    uint16_t doff:4;
-    uint16_t fin:1;
+    uint16_t th_off:4;   // data offset (BSD style) - also accessible as 'doff'
+    uint16_t fin:1;      // Linux style flags
     uint16_t syn:1;
     uint16_t rst:1;
     uint16_t psh:1;
     uint16_t ack:1;
     uint16_t urg:1;
     uint16_t res2:2;
-    uint16_t window;
-    uint16_t check;
-    uint16_t urg_ptr;
+    uint16_t th_win;     // window size (BSD style) - also accessible as 'window'
+    uint16_t th_sum;     // checksum (BSD style) - also accessible as 'check'
+    uint16_t th_urp;     // urgent pointer (BSD style) - also accessible as 'urg_ptr'
 };
+
+// Provide Linux-style field name aliases
+#define source th_sport
+#define dest th_dport
+#define seq th_seq
+#define ack_seq th_ack
+#define doff th_off
+#define window th_win
+#define check th_sum
+#define urg_ptr th_urp
 
 #endif // __APPLE__
 
