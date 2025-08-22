@@ -92,7 +92,7 @@ const char* find_interface_for_target(const char *target_ip) {
     return best_iface ? best_iface : strdup("eth0");
 }
 
-void add_port(int port, scan_type_t scan_type) {
+void add_port(int port) {
     t_port *new_port = malloc(sizeof(t_port));
     if (!new_port) {
         perror("Failed to allocate memory for new port");
@@ -100,7 +100,6 @@ void add_port(int port, scan_type_t scan_type) {
     }
     new_port->port = port;
     new_port->state = STATE_WAITING;
-    new_port->scan_type = scan_type;
     new_port->next = NULL;
 
     pthread_mutex_lock(&g_config.mutex);

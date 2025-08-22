@@ -64,6 +64,11 @@ void process_packet(u_char *user, const struct pcap_pkthdr *header, const u_char
                 printf("Port %d: CLOSED\n", current->port);
                 current->state = STATE_CLOSED;
             }
+            else if (tcph->fin)
+            {
+                printf("Port %d: FILTERED\n", current->port);
+                current->state = STATE_FILTERED;
+            }
             // else
             // {
             //     printf("Port %d: UNKNOWN RESPONSE\n", current->port);
@@ -106,7 +111,7 @@ void *start_listner()
     }
 
     // set filter to catch incoming packets not outgoing
-    snprintf(filter_exp, 100, "tcp and dst host %s", g_config.src_ip);
+    snprintf(filter_exp, 100, "tcp and src host %s and dst host %s", g_config.ip, g_config.src_ip);
     // snprintf(filter_exp, 100, "((tcp) and (dst host %s))", g_config.src_ip);
     // fprintf(stderr, "Using filter: %s\n\n", filter_exp);
     if (pcap_compile(handle, &fp, filter_exp, 0, netmask) == -1)
@@ -132,7 +137,7 @@ void *start_listner()
         if (pd == 0)
         {
             timeout_count++;
-            if (timeout_count >= 5)
+            if (timeout_count >= 3)
             {
                 printf("Listener timeout reached\n");
                 break;

@@ -19,11 +19,15 @@ int main(int argc, char **argv) {
 
     //parce data
     parse_args(argc, argv);
-    parse_ports();
+    fprintf(stderr, "Parsed arguments successfully\n");
     parse_scan_types();
+    fprintf(stderr, "Parsed scan types successfully\n");
+    parse_ports();
+    fprintf(stderr, "Parsed ports successfully\n");
 
     //print check for data config
     print_debug();
+    fprintf(stderr, "Finished printing debug information\n");
 
     // Initialize scan configuration
     init_scan();

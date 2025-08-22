@@ -1,16 +1,10 @@
 #include "../include/ft_nmap.h"
 
 void send_syn(int sock, struct sockaddr_in *target, char *datagram) {
+    (void)sock;
+    (void)target;
+    (void)datagram;
 
-    pthread_mutex_lock(&g_config.mutex);
-    if (sendto(sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr), 0,
-               (struct sockaddr *)target, sizeof(*target)) < 0) {
-        perror("sendto");
-        }
-    // } else {
-    //     printf("Packet sent successfully\n");
-    // }
-    pthread_mutex_unlock(&g_config.mutex);
     }
 
 
@@ -77,7 +71,7 @@ void *scan_thread(void *arg) {
         return NULL;
     }
 
-    printf("Thread %d: Starting with port %d\n", data->thread_id, current->port);
+    // printf("Thread %d: Starting with port %d\n", data->thread_id, current->port);
 
     while (current && !g_config.scan_complete) {
         // Set up target for this port
@@ -89,6 +83,20 @@ void *scan_thread(void *arg) {
 
         // Initialize headers
         set_ip_header(ip, src_ip, &target);
+
+        // if (g_config.scan_types.ack & SCAN_ACK)
+        //     send_ack(sock, &target, datagram);
+        // if (g_config.scan_types.fin & SCAN_FIN)
+        //     send_fin(sock, &target, datagram);
+        // if (g_config.scan_types.null & SCAN_NULL)
+        //     send_null(sock, &target, datagram);
+        // if (g_config.scan_types.xmas & SCAN_XMAS)
+        //     send_xmas(sock, &target, datagram);
+        // if (g_config.scan_types.udp & SCAN_UDP)
+        //     send_udp(sock, &target, datagram);
+        if (g_config.scan_types.syn & SCAN_SYN)
+            send_syn(data->sock, &target, datagram);
+
         set_tcp_header(tcp, SCAN_SYN);
         tcp->th_dport = htons(current->port);
         
@@ -131,6 +139,6 @@ void *scan_thread(void *arg) {
         pthread_mutex_unlock(&g_config.mutex);
     }
 
-    printf("Thread %d: finished sending packets\n", data->thread_id);
+    // printf("Thread %d: finished sending packets\n", data->thread_id);
     return NULL;
 }

@@ -41,15 +41,17 @@ void set_ip_header(struct ip *ip, const char *src_ip, struct sockaddr_in *target
     ip->ip_sum = 0; // Will be calculated later
 }
 
-void set_tcp_header(struct tcphdr *tcp, scan_type_t target_type) {
+void set_tcp_header(struct tcphdr *tcp, scan_type target_type) {
+
+    //print (target_type & SCAN_SYN) (target_type & SCAN_ACK) ...
     tcp->th_sport = htons(generate_source_port());
     tcp->th_dport = htons(80);
     tcp->th_seq = htonl(rand());
     tcp->th_ack = 0;
     tcp->th_off = 6;
+	tcp->syn = (target_type & SCAN_SYN) ? 1 : 0;
     tcp->fin = (target_type & SCAN_FIN) ? 1 : 0;
 	tcp->rst = 0;
-	tcp->syn = 1;
 	tcp->ack = (target_type & SCAN_ACK) ? 1 : 0;
     tcp->th_win = htons(1024);
     tcp->th_urp = 0;
