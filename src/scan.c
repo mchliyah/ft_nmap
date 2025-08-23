@@ -28,6 +28,7 @@ void start_sender_threads(int sock, pthread_t *threads, scan_thread_data *thread
             .start_range = start_range,
             .end_range = start_range + ports_per_thread + (i < remaining_ports ? 1 : 0)
         };
+        // printf("default port state: %s\n", port_state_to_string(current->state));
         if (pthread_create(&threads[i], NULL, scan_thread, &thread_data[i]) != 0) {
             perror("pthread_create");
             exit(EXIT_FAILURE);
@@ -121,7 +122,7 @@ void run_scan() {
 
     //start the thread listner 
     start_thread_listner(&global_listener);
-    usleep(50000);
+    usleep(100000);
     // threads chunk sender
     int sock = set_socket();
     start_sender_threads(sock, threads, thread_data);

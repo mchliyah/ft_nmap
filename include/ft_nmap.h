@@ -26,7 +26,8 @@ unsigned short csum(unsigned short *ptr, int nbytes);
 uint16_t calculate_tcp_checksum(struct ip *ip, struct tcphdr *tcp, uint8_t *options, int options_len);
 void *start_listner();
 uint16_t generate_source_port();
-void add_port(int port);
+void add_port(int port, int state);
+const char *port_state_to_string(int state);
 void print_debug(void);
 
 #endif

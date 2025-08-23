@@ -2,9 +2,9 @@
 
 // Parse port ranges like "80,443,1000-2000" , and default scan to SYN-SCAn
 void parse_ports() {
-    if (!g_config.ports) {
+    if (!g_config.ports && (!g_config.scan_type_count || g_config.scan_types.syn == SCAN_SYN)) {
         // Default ports 1-1024
-        for (int i = 1; i <= 1024; i++) add_port(i);
+        for (int i = 1; i <= 1024; i++) add_port(i, STATE_FILTERED);
         return;
     }
 
@@ -16,10 +16,10 @@ void parse_ports() {
             int start = atoi(token);
             int end = atoi(dash + 1);
             for (int p = start; p <= end; p++) {
-                add_port(p);
+                add_port(p, STATE_FILTERED);
             }
         } else {
-            add_port(atoi(token));
+            add_port(atoi(token), STATE_FILTERED);
         }
         token = strtok(NULL, ",");
     }

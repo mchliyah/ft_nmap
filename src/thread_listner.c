@@ -1,5 +1,17 @@
 #include "../include/ft_nmap.h"
 
+// char *get_service_name(int port)
+// {
+//     // This function should return the service name associated with the given port
+//     // For now, we'll just return a placeholder string
+//     switch (port) {
+//         case 22:  return "SSH";
+//         case 80:  return "HTTP";
+//         case 443: return "HTTPS";
+//         default:  return "UNKNOWN";
+//     }
+// }
+
 void process_packet(u_char *user, const struct pcap_pkthdr *header, const u_char *buffer)
 {
     (void)user;
@@ -28,6 +40,8 @@ void process_packet(u_char *user, const struct pcap_pkthdr *header, const u_char
     pthread_mutex_lock(&g_config.port_mutex);
     t_port *current = g_config.port_list;
     while (current) {
+
+        // check header for service
         if (ntohs(tcph->source) == current->port)
         {
             if (tcph->syn && tcph->ack) current->state = STATE_OPEN;
