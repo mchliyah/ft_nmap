@@ -12,32 +12,33 @@ void start_thread_listner(pthread_t *global_listener) {
 }
 
 
-void send_packets(int sock, pthread_t *threads, scan_thread_data *thread_data) {
+void start_sender_threads(int sock, pthread_t *threads, scan_thread_data *thread_data) {
 
-    // This function will send packets to the target IPs using multiple threads
-
-    // puts(" ==================== Starting packet sender threads...");
     int ports_per_thread = g_config.port_count / g_config.speedup;
     int remaining_ports = g_config.port_count % g_config.speedup;
-    int current_port = 0;
+    int start_range = 0;
+    t_port *current = g_config.port_list;
     int thread_created = 0;
 
-    // fprintf(stderr, "before loop creation speedup %d\n", g_config.speedup);
     for (int i = 0; i < g_config.speedup; i++) {
         thread_data[i] = (scan_thread_data){
             .sock = sock,
             .thread_id = i,
-            .start_range = current_port,
-            .end_range = current_port + ports_per_thread + (i < remaining_ports ? 1 : 0)
+            .current = current,
+            .start_range = start_range,
+            .end_range = start_range + ports_per_thread + (i < remaining_ports ? 1 : 0)
         };
         if (pthread_create(&threads[i], NULL, scan_thread, &thread_data[i]) != 0) {
             perror("pthread_create");
             exit(EXIT_FAILURE);
         }
         thread_created++;
-        current_port = thread_data[i].end_range;
+        start_range = thread_data[i].end_range;
+        // Move current pointer to the start of the next thread's range
+        while (current && current->port < start_range) {
+            current = current->next;
+        }
     }
-    // printf("Total threads created: %d\n", thread_created);
 }
 
 
@@ -123,7 +124,7 @@ void run_scan() {
     usleep(50000);
     // threads chunk sender
     int sock = set_socket();
-    send_packets(sock, threads, thread_data);
+    start_sender_threads(sock, threads, thread_data);
     // printf("Waiting for scanning threads to complete...\n");
     for (int i = 0; i < g_config.speedup; i++) {
         pthread_join(threads[i], NULL);

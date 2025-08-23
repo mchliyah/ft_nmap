@@ -27,6 +27,40 @@ uint16_t generate_source_port() {
     return 32768 + (rand() % 28232);
 }
 
+
+uint16_t calculate_tcp_checksum(struct ip *ip, struct tcphdr *tcp, uint8_t *options, int options_len) {
+    struct {
+        uint32_t src;
+        uint32_t dst;
+        uint8_t zero;
+        uint8_t proto;
+        uint16_t tcp_len;
+    } pseudo_header;
+    
+    // Fill pseudo header
+    pseudo_header.src = ip->ip_src.s_addr;
+    pseudo_header.dst = ip->ip_dst.s_addr;
+    pseudo_header.zero = 0;
+    pseudo_header.proto = IPPROTO_TCP;
+    pseudo_header.tcp_len = htons(sizeof(struct tcphdr) + options_len);
+    
+    // Calculate total length for checksum calculation
+    int total_len = sizeof(pseudo_header) + sizeof(struct tcphdr) + options_len;
+    char *buf = malloc(total_len);
+    
+    // Copy pseudo header, TCP header, and options to buffer
+    memcpy(buf, &pseudo_header, sizeof(pseudo_header));
+    memcpy(buf + sizeof(pseudo_header), tcp, sizeof(struct tcphdr));
+    memcpy(buf + sizeof(pseudo_header) + sizeof(struct tcphdr), options, options_len);
+    
+    // Calculate checksum
+    uint16_t checksum = csum((unsigned short *)buf, total_len);
+    
+    free(buf);
+    return checksum;
+}
+
+
 void set_ip_header(struct ip *ip, const char *src_ip, struct sockaddr_in *target) {
     ip->ip_hl = 5; // Header length in 32-bit words (5*4=20 bytes) i've been getting 12024
     ip->ip_v = 4;

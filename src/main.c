@@ -12,7 +12,6 @@ void init_scan() {
 
     srand(time(NULL));
     g_config.scan_start_time = time(NULL);
-    g_config.scaner_on = 1;
     g_config.src_ip = get_interface_ip(g_config.ip);
 }
 int main(int argc, char **argv) {

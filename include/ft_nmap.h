@@ -8,12 +8,12 @@ extern t_config g_config;
 
 // Function prototypes
 void print_help();
-void print_complete_scan();
-void print_scan_result();
-void parse_args(int argc, char **argv);
 void parse_ports();
 void parse_scan_types();
 void run_scan();
+void print_complete_scan();
+void print_scan_result();
+void parse_args(int argc, char **argv);
 void *scan_thread(void *arg);
 const char* find_interface_for_target(const char *target_ip);
 const char* get_interface_ip(const char *target_ip);
@@ -23,10 +23,8 @@ void set_ip_header(struct ip *ip, const char *src_ip, struct sockaddr_in *target
 
 void set_psudo_header(struct pseudo_header *psh, const char *src_ip, struct sockaddr_in *target);
 unsigned short csum(unsigned short *ptr, int nbytes);
-uint16_t tcp_csum(struct ip *ip, struct tcphdr *tcp, uint8_t *options, int options_len);
-void send_syn(int sock, struct sockaddr_in *target, char *datagram);
+uint16_t calculate_tcp_checksum(struct ip *ip, struct tcphdr *tcp, uint8_t *options, int options_len);
 void *start_listner();
-void *scan_thread(void *arg);
 uint16_t generate_source_port();
 void add_port(int port);
 void print_debug(void);

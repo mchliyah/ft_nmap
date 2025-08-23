@@ -45,18 +45,18 @@ typedef enum port_state {
     .file                =  NULL, \
     .ports               =  NULL, \
     .scans               =  NULL, \
-    .speedup             =  0,   \
     .port_list           =  NULL, \
+    .speedup             =  0,   \
     .port_count          =  0,    \
     .scan_type_count     =  0,    \
-    .listner_thread_done =  0,    \
-    .scaner_on           =  0,    \
     .scan_complete       =  0,    \
     .scan_start_time     =  0,    \
     .timeout             =  5,    \
     .scan_types          =  INIT_SCAN_TYPES(), \
     .cond                =  PTHREAD_COND_INITIALIZER, \
-    .mutex               =  PTHREAD_MUTEX_INITIALIZER \
+    .port_mutex          =  PTHREAD_MUTEX_INITIALIZER, \
+    .print_mutex         =  PTHREAD_MUTEX_INITIALIZER, \
+    .socket_mutex        =  PTHREAD_MUTEX_INITIALIZER \
 }
 
 typedef struct {
@@ -89,24 +89,25 @@ typedef struct {
     char *ports;
     char *scans;
     int speedup;
-    t_port *port_list;
     int port_count;
-    scan_type_t scan_types;
     int scan_type_count;
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
-    int listner_thread_done;
-    int scaner_on;
     int scan_complete;
-    time_t scan_start_time;
     int timeout;
     int ports_per_thread;
     const char *src_ip;
+    t_port *port_list;
+    scan_type_t scan_types;
+    time_t scan_start_time;
+    pthread_cond_t cond;
+    pthread_mutex_t port_mutex;
+    pthread_mutex_t print_mutex;
+    pthread_mutex_t socket_mutex;
 } t_config;
 
 typedef struct {
     int sock;
     int thread_id;
+    t_port *current;
     int start_range;
     int end_range;
     struct sockaddr_in target;
