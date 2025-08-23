@@ -32,6 +32,13 @@ int main(int argc, char **argv) {
     // Initialize scan configuration
     init_scan();
     run_scan();
+    print_scan_result();
+    t_port *current = g_config.port_list;
+    while (current) {
+        t_port *next = current->next;
+        free(current);
+        current = next;
+    }
 
     return 0;
 }

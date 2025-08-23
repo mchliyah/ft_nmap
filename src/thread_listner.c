@@ -56,24 +56,19 @@ void process_packet(u_char *user, const struct pcap_pkthdr *header, const u_char
 
             if (tcph->syn && tcph->ack)
             {
-                printf("Port %d: OPEN\n", current->port);
+                // printf("Port %d: OPEN\n", current->port);
                 current->state = STATE_OPEN;
             }
             else if (tcph->rst)
             {
-                printf("Port %d: CLOSED\n", current->port);
+                // printf("Port %d: CLOSED\n", current->port);
                 current->state = STATE_CLOSED;
             }
             else if (tcph->fin)
             {
-                printf("Port %d: FILTERED\n", current->port);
+                // printf("Port %d: FILTERED\n", current->port);
                 current->state = STATE_FILTERED;
             }
-            // else
-            // {
-            //     printf("Port %d: UNKNOWN RESPONSE\n", current->port);
-            // }
-            // break; // Stop after finding the matching port
         }
         current = current->next;
     }

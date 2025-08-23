@@ -53,12 +53,6 @@ void cleanup(pthread_t *threads, pthread_t global_listener) {
     pthread_join(global_listener, NULL);
 
     // Free allocated memory for ports and scan types
-    t_port *current = g_config.port_list;
-    while (current) {
-        t_port *next = current->next;
-        free(current);
-        current = next;
-    }
     // for (int i = 0; i < g_config.scan_type_count; i++) {
     //     if (g_config.scan_types[i]) {
     //         free(g_config.scan_types[i]);
@@ -141,6 +135,6 @@ void run_scan() {
 
     // Handle timeout and results
     timeout_scan_result(global_listener);
-    cleanup(threads, global_listener);
+    // cleanup(threads, global_listener);
 
 }

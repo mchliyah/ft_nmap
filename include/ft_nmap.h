@@ -9,7 +9,7 @@ extern t_config g_config;
 // Function prototypes
 void print_help();
 void print_complete_scan();
-void print_scan_result(int port, int state, scan_type_t scan_type);
+void print_scan_result();
 void parse_args(int argc, char **argv);
 void parse_ports();
 void parse_scan_types();
