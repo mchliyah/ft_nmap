@@ -44,9 +44,15 @@ void process_packet(u_char *user, const struct pcap_pkthdr *header, const u_char
         // check header for service
         if (ntohs(tcph->source) == current->port)
         {
-            if (tcph->syn && tcph->ack) current->state = STATE_OPEN;
-            else if (tcph->rst) current->state = STATE_CLOSED;
-            else if (tcph->fin) current->state = STATE_FILTERED;
+            if (tcph->syn && tcph->ack){
+                current->state = STATE_OPEN;
+            }
+            else if (tcph->rst){
+                current->state = STATE_CLOSED;
+            }
+            else if (tcph->fin){
+                current->state = STATE_FILTERED;
+            }
         }
         current = current->next;
     }

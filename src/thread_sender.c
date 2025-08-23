@@ -28,34 +28,35 @@ void send_syn(scan_thread_data *data ,t_port *current, struct tcphdr *tcp, struc
 
 }
 
-void send_packets(scan_thread_data *data, t_port *current_port, t_port *end_port, char *datagram, struct tcphdr *tcp, struct ip *ip, uint8_t *tcp_options, const char *src_ip) {
+void send_packets(scan_thread_data *data, t_port *current_port, char *datagram, struct tcphdr *tcp, struct ip *ip, uint8_t *tcp_options, const char *src_ip) {
 
-    while (current_port && current_port != end_port && !g_config.scan_complete) {
-    struct sockaddr_in target = {
-        .sin_family = AF_INET,
-        .sin_port = htons(current_port->port),
-        .sin_addr = { .s_addr = inet_addr(g_config.ip) }
-    };
-    
-    set_ip_header(ip, src_ip, &target);
+    int start = data->start_range;
 
-    // if (g_config.scan_types.ack & SCAN_ACK)
-    //     send_ack(sock, &target, datagram);
-    // if (g_config.scan_types.fin & SCAN_FIN)
-    //     send_fin(sock, &target, datagram);
-    // if (g_config.scan_types.null & SCAN_NULL)
-    //     send_null(sock, &target, datagram);
-    // if (g_config.scan_types.xmas & SCAN_XMAS)
-    //     send_xmas(sock, &target, datagram);
-    // if (g_config.scan_types.udp & SCAN_UDP)
-    //     send_udp(sock, &target, datagram);
-    if (g_config.scan_types.syn & SCAN_SYN)
-        send_syn(data, current_port, tcp, ip, target, datagram, tcp_options);
-    pthread_mutex_lock(&g_config.port_mutex);
-    current_port = current_port->next;
-    if (current_port && current_port->port > data->end_range) {
-        current_port = NULL;
-    }
+    while (current_port && start < data->end_range) {
+        // fprintf(stderr, "Thread %d scanning ports %d to %d\n", data->thread_id, start, end);
+        struct sockaddr_in target = {
+            .sin_family = AF_INET,
+            .sin_port = htons(current_port->port),
+            .sin_addr = { .s_addr = inet_addr(g_config.ip) }
+        };
+        // fprintf(stderr, "Sending packet to %s:%d\n", inet_ntoa(target.sin_addr), current_port->port);
+        set_ip_header(ip, src_ip, &target);
+
+        // if (g_config.scan_types.ack & SCAN_ACK)
+        //     send_ack(sock, &target, datagram);
+        // if (g_config.scan_types.fin & SCAN_FIN)
+        //     send_fin(sock, &target, datagram);
+        // if (g_config.scan_types.null & SCAN_NULL)
+        //     send_null(sock, &target, datagram);
+        // if (g_config.scan_types.xmas & SCAN_XMAS)
+        //     send_xmas(sock, &target, datagram);
+        // if (g_config.scan_types.udp & SCAN_UDP)
+        //     send_udp(sock, &target, datagram);
+        if (g_config.scan_types.syn & SCAN_SYN)
+            send_syn(data, current_port, tcp, ip, target, datagram, tcp_options);
+        pthread_mutex_lock(&g_config.port_mutex);
+        current_port = current_port->next;
+        start++;
         pthread_mutex_unlock(&g_config.port_mutex);
     }
 
@@ -86,6 +87,7 @@ void *scan_thread(void *arg) {
 
     t_port *end_port = current_port;
     while (end_port && start_range <= end_range) {
+        // fprintf(stderr, "Thread %d: Scanning port %d\n", data->thread_id, end_port->port);
         end_port = end_port->next;
         start_range++;
     }
@@ -97,6 +99,6 @@ void *scan_thread(void *arg) {
     uint8_t *tcp_options = set_options(datagram);
 
 
-    send_packets(data, current_port, end_port, datagram, tcp, ip, tcp_options, src_ip);
+    send_packets(data, current_port, datagram, tcp, ip, tcp_options, src_ip);
     return NULL;
 }

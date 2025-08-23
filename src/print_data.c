@@ -39,22 +39,22 @@ void print_scan_result(void) {
     printf("PORT   STATE    SERVICE\n");
     t_port *current = g_config.port_list;
     //no scan type specified
-    // if (g_config.scans) {
+    if (!g_config.ports) {
         while (current) {
-            const char *state_str = port_state_to_string(current->state);
-            if (state_str) {
-                printf("%-5d %-8s %s\n", current->port, state_str, "");
+            if (current->state != STATE_CLOSED && current->state != STATE_FILTERED) {
+                printf("Port %d: %s\n", current->port, port_state_to_string(current->state));
             }
             current = current->next;
         }
-    // }
-    // scan type specified 
-    // else if (!g_config.scans) {
-        // while (current) {
-            // if (current->state != STATE_CLOSED) {
-                // printf("Port %d: %s\n", current->port, port_state_to_string(current->state));
-            // }
-            // current = current->next;
-        // }
-    // }
+    }
+    else if (g_config.scans) {
+        while (current) {
+            const char *state_str = port_state_to_string(current->state);
+            if (state_str) {
+                printf(" =========   %-5d %-8s %s\n", current->port, state_str, "");
+            }
+            current = current->next;
+        }
+    }
+    // scan type specified
 }
