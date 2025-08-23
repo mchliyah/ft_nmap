@@ -27,6 +27,40 @@ uint16_t generate_source_port() {
     return 32768 + (rand() % 28232);
 }
 
+
+uint16_t calculate_tcp_checksum(struct ip *ip, struct tcphdr *tcp, uint8_t *options, int options_len) {
+    struct {
+        uint32_t src;
+        uint32_t dst;
+        uint8_t zero;
+        uint8_t proto;
+        uint16_t tcp_len;
+    } pseudo_header;
+    
+    // Fill pseudo header
+    pseudo_header.src = ip->ip_src.s_addr;
+    pseudo_header.dst = ip->ip_dst.s_addr;
+    pseudo_header.zero = 0;
+    pseudo_header.proto = IPPROTO_TCP;
+    pseudo_header.tcp_len = htons(sizeof(struct tcphdr) + options_len);
+    
+    // Calculate total length for checksum calculation
+    int total_len = sizeof(pseudo_header) + sizeof(struct tcphdr) + options_len;
+    char *buf = malloc(total_len);
+    
+    // Copy pseudo header, TCP header, and options to buffer
+    memcpy(buf, &pseudo_header, sizeof(pseudo_header));
+    memcpy(buf + sizeof(pseudo_header), tcp, sizeof(struct tcphdr));
+    memcpy(buf + sizeof(pseudo_header) + sizeof(struct tcphdr), options, options_len);
+    
+    // Calculate checksum
+    uint16_t checksum = csum((unsigned short *)buf, total_len);
+    
+    free(buf);
+    return checksum;
+}
+
+
 void set_ip_header(struct ip *ip, const char *src_ip, struct sockaddr_in *target) {
     ip->ip_hl = 5; // Header length in 32-bit words (5*4=20 bytes) i've been getting 12024
     ip->ip_v = 4;
@@ -41,15 +75,17 @@ void set_ip_header(struct ip *ip, const char *src_ip, struct sockaddr_in *target
     ip->ip_sum = 0; // Will be calculated later
 }
 
-void set_tcp_header(struct tcphdr *tcp, scan_type_t target_type) {
+void set_tcp_header(struct tcphdr *tcp, scan_type target_type) {
+
+    //print (target_type & SCAN_SYN) (target_type & SCAN_ACK) ...
     tcp->th_sport = htons(generate_source_port());
     tcp->th_dport = htons(80);
     tcp->th_seq = htonl(rand());
     tcp->th_ack = 0;
     tcp->th_off = 6;
+	tcp->syn = (target_type & SCAN_SYN) ? 1 : 0;
     tcp->fin = (target_type & SCAN_FIN) ? 1 : 0;
 	tcp->rst = 0;
-	tcp->syn = 1;
 	tcp->ack = (target_type & SCAN_ACK) ? 1 : 0;
     tcp->th_win = htons(1024);
     tcp->th_urp = 0;

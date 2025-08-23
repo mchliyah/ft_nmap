@@ -2,11 +2,9 @@
 
 // Parse port ranges like "80,443,1000-2000" , and default scan to SYN-SCAn
 void parse_ports() {
-    if (!g_config.ports) {
+    if (!g_config.ports && (!g_config.scan_type_count || g_config.scan_types.syn == SCAN_SYN)) {
         // Default ports 1-1024
-        for (int i = 1; i <= 1024; i++) {
-            add_port(i, SCAN_SYN); 
-        }
+        for (int i = 1; i <= 1024; i++) add_port(i, STATE_FILTERED);
         return;
     }
 
@@ -18,54 +16,72 @@ void parse_ports() {
             int start = atoi(token);
             int end = atoi(dash + 1);
             for (int p = start; p <= end; p++) {
-                add_port(p, SCAN_SYN); 
+                add_port(p, STATE_FILTERED);
             }
         } else {
-            add_port(atoi(token), SCAN_SYN); 
+            add_port(atoi(token), STATE_FILTERED);
         }
         token = strtok(NULL, ",");
     }
 }
 
+void set_scan_type(t_port *port, scan_type scan_type)
+{
+    switch (scan_type) {
+        case SCAN_SYN:
+            port->state = STATE_FILTERED;
+            break;
+        case SCAN_NULL:
+            port->state = STATE_OPEN;
+            break;
+        case SCAN_FIN:
+            port->state = STATE_OPEN;
+            break;  
+        case SCAN_XMAS:
+            port->state = STATE_OPEN;
+            break;
+        case SCAN_ACK:
+            port->state = STATE_FILTERED;
+            break;
+        case SCAN_UDP:
+            port->state = STATE_CLOSED;
+            break;
+    }
+
+}
 // Parse scan types like "SYN,NULL,FIN"
 void parse_scan_types() {
-    if (!g_config.scans) {
-        t_port *current = g_config.port_list;
-        while (current) {
-            current->scan_type = SCAN_SYN;
-            current = current->next;
-        }
+
+    if (!g_config.scans)
+    {
+        // Default to SYN scan
+        g_config.scan_types.syn = SCAN_SYN;
         return;
     }
 
-    // Parse the scan types string
     char *token = strtok(g_config.scans, ",");
-    while (token) {
-        scan_type_t scan_type;
+    while (token)
+    {
+        fprintf(stderr, "Parsed scan type: %s\n", token);
         if (strcmp(token, "S") == 0) {
-            scan_type = SCAN_SYN;
+            g_config.scan_types.syn = SCAN_SYN;
         } else if (strcmp(token, "N") == 0) {
-            scan_type = SCAN_NULL;
+            g_config.scan_types.null = SCAN_NULL;
         } else if (strcmp(token, "F") == 0) {
-            scan_type = SCAN_FIN;
+            g_config.scan_types.fin = SCAN_FIN;
         } else if (strcmp(token, "X") == 0) {
-            scan_type = SCAN_XMAS;
+            g_config.scan_types.xmas = SCAN_XMAS;
         } else if (strcmp(token, "A") == 0) {
-            scan_type = SCAN_ACK;
+            g_config.scan_types.ack = SCAN_ACK;
         } else if (strcmp(token, "U") == 0) {
-            scan_type = SCAN_UDP;
+            g_config.scan_types.udp = SCAN_UDP;
         } else {
             fprintf(stderr, "Unknown scan type: %s\n", token);
             exit(EXIT_FAILURE);
         }
-
-        // Apply the scan type to all ports
-        t_port *current = g_config.port_list;
-        while (current) {
-            current->scan_type = scan_type;
-            current = current->next;
-        }
-
+        g_config.scan_type_count++;
+        
         token = strtok(NULL, ",");
     }
 }
+
