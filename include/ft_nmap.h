@@ -29,5 +29,7 @@ uint16_t generate_source_port();
 void add_port(int port, int state);
 const char *port_state_to_string(int state);
 void print_debug(void);
+char** read_ips_from_file(const char* filename, int* count);
+void free_ip_array(char** ips, int count);
 
 #endif

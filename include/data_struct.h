@@ -42,6 +42,8 @@ typedef enum port_state {
 // configuration
 #define INIT_CONFIG() {           \
     .ip                  =  NULL, \
+    .ip_list             =  NULL, \
+    .ip_count            =  0,    \
     .file                =  NULL, \
     .ports               =  NULL, \
     .scans               =  NULL, \
@@ -86,6 +88,8 @@ typedef struct t_port{
 
 typedef struct {
     char *ip;
+    char **ip_list;      // Array of IP addresses for multi-IP support
+    int ip_count;        // Number of IP addresses
     char *file;
     char *ports;
     char *scans;
