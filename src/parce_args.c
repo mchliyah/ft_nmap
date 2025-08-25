@@ -35,19 +35,19 @@ void parse_args(int argc, char **argv) {
             default: print_help(); exit(1);
         }
     }
-    
+
     // If we're in IP mode and there are remaining arguments, they are additional IPs
     if (ip_mode && optind < argc) {
         // Count total IPs (first one + remaining arguments)
         int total_ips = 1 + (argc - optind);
-        
+
         // Allocate array for IP strings
         char **ip_list = malloc(total_ips * sizeof(char*));
         if (!ip_list) {
             fprintf(stderr, "Error: Failed to allocate memory for IP list\n");
             exit(1);
         }
-        
+
         // Store first IP
         ip_list[0] = malloc(strlen(g_config.ip) + 1);
         strcpy(ip_list[0], g_config.ip);
