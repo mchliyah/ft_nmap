@@ -38,4 +38,9 @@ void print_debug(void);
 char** read_ips_from_file(const char* filename, int* count);
 void free_ip_array(char** ips, int count);
 
+// service 
+
+const char *get_service_by_port(int port);
+const char *extract_service_from_payload(const unsigned char *payload, size_t payload_len, int port);   
+
 #endif

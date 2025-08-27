@@ -20,12 +20,10 @@
 #include <net/if.h>
 #include <net/route.h>
 #include <sys/ioctl.h>
-#ifdef __linux__
-#include <linux/if_packet.h>
-#endif
 #include <net/ethernet.h>
 #include <netinet/udp.h>
 #include <ctype.h>
+#ifdef __linux__
+#include <linux/if_packet.h>
+#endif
 #include "linux_compat.h"
-
-

@@ -35,20 +35,20 @@ const char *port_state_to_string(int state) {
 }
 
 void print_scan_result(void) {
-    printf("PORT   STATE    SERVICE\n");
+    printf("PORT       STATE        SERVICE\n");
     t_port *current = g_config.port_list;
     
     if (!g_config.ports) {
         while (current) {
             if (current->state != STATE_CLOSED && current->state != STATE_FILTERED) {
-                printf("%-5d  %-8s %s\n", current->port, port_state_to_string(current->state), current->service ? current->service : "unknown");
+                printf("%d/%-4s  %-12s %s\n", current->port, current->tcp_udp, port_state_to_string(current->state), current->service ? current->service : "unknown");
             }
             current = current->next;
         }
     }
     else {
         while (current) {
-            printf("%-5d  %-8s %s\n", current->port, port_state_to_string(current->state), current->service ? current->service : "unknown");
+            printf("%d/%-4s  %-12s %s\n", current->port, current->tcp_udp, port_state_to_string(current->state), current->service ? current->service : "unknown");
             current = current->next;
         }
     }
