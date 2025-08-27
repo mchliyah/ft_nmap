@@ -18,7 +18,9 @@ void start_sender_threads(int sock, pthread_t *threads, scan_thread_data *thread
     int remaining_ports = g_config.port_count % g_config.speedup;
     int start_range = 0;
     t_port *current = g_config.port_list;
-    int thread_created = 0;
+
+    // int thread_created = 0;
+
     for (int i = 0; i < g_config.speedup; i++) {
         thread_data[i] = (scan_thread_data){
             .sock = sock,
@@ -31,7 +33,7 @@ void start_sender_threads(int sock, pthread_t *threads, scan_thread_data *thread
             perror("pthread_create");
             exit(EXIT_FAILURE);
         }
-        thread_created++;
+        // thread_created++;
         start_range = thread_data[i].end_range;
         // Move current pointer to the start of the next thread's range
         while (current && current->port < start_range) {

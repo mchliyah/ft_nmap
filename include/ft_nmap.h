@@ -18,6 +18,12 @@ void *scan_thread(void *arg);
 const char* find_interface_for_target(const char *target_ip);
 const char* get_interface_ip(const char *target_ip);
 void init_scan();
+void scan_single_ip(const char* target_ip);
+void handle_multi_ip_scan();
+void handle_file_scan();
+void handle_single_ip_scan();
+void initialize_config();
+void cleanup_ports();
 void set_tcp_header(struct tcphdr *tcp, scan_type target_type);
 void set_ip_header(struct ip *ip, const char *src_ip, struct sockaddr_in *target);
 
@@ -29,5 +35,7 @@ uint16_t generate_source_port();
 void add_port(int port, int state);
 const char *port_state_to_string(int state);
 void print_debug(void);
+char** read_ips_from_file(const char* filename, int* count);
+void free_ip_array(char** ips, int count);
 
 #endif

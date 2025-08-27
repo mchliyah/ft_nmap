@@ -115,3 +115,102 @@ void add_port(int port, int state) {
     g_config.port_count++;
     pthread_mutex_unlock(&g_config.port_mutex);
 }
+
+// Function to read IPs from file
+char** read_ips_from_file(const char* filename, int* count) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        fprintf(stderr, "Error: Could not open file '%s': %s\n", filename, strerror(errno));
+        return NULL;
+    }
+    
+    char **ips = NULL;
+    char line[256];
+    *count = 0;
+    
+    // First pass: count lines
+    while (fgets(line, sizeof(line), file)) {
+        // Remove trailing newline and whitespace
+        line[strcspn(line, "\r\n")] = 0;
+        
+        // Skip empty lines and comments
+        if (strlen(line) == 0 || line[0] == '#') {
+            continue;
+        }
+        
+        (*count)++;
+    }
+    
+    if (*count == 0) {
+        fprintf(stderr, "Error: No valid IP addresses found in file '%s'\n", filename);
+        fclose(file);
+        return NULL;
+    }
+    
+    // Allocate memory for IP array
+    ips = malloc(*count * sizeof(char*));
+    if (!ips) {
+        fprintf(stderr, "Error: Failed to allocate memory for IP addresses\n");
+        fclose(file);
+        return NULL;
+    }
+    
+    // Second pass: read IPs
+    rewind(file);
+    int index = 0;
+    while (fgets(line, sizeof(line), file) && index < *count) {
+        // Remove trailing newline and whitespace
+        line[strcspn(line, "\r\n")] = 0;
+        
+        // Skip empty lines and comments
+        if (strlen(line) == 0 || line[0] == '#') {
+            continue;
+        }
+        
+        // Validate IP format (basic check)
+        struct sockaddr_in sa;
+        if (inet_pton(AF_INET, line, &(sa.sin_addr)) != 1) {
+            fprintf(stderr, "Warning: Invalid IP address format '%s', skipping\n", line);
+            continue;
+        }
+        
+        // Allocate and store IP
+        ips[index] = malloc(strlen(line) + 1);
+        if (!ips[index]) {
+            fprintf(stderr, "Error: Failed to allocate memory for IP address\n");
+            // Clean up previously allocated IPs
+            for (int i = 0; i < index; i++) {
+                free(ips[i]);
+            }
+            free(ips);
+            fclose(file);
+            return NULL;
+        }
+        strcpy(ips[index], line);
+        index++;
+    }
+    
+    *count = index; // Update count to actual number of valid IPs
+    fclose(file);
+    
+    if (*count == 0) {
+        free(ips);
+        fprintf(stderr, "Error: No valid IP addresses found in file '%s'\n", filename);
+        return NULL;
+    }
+    
+    printf("Successfully loaded %d IP address(es) from file '%s'\n", *count, filename);
+    return ips;
+}
+
+// Function to free IP array
+void free_ip_array(char** ips, int count) {
+    if (!ips) return;
+    
+    for (int i = 0; i < count; i++) {
+        if (ips[i]) {
+            free(ips[i]);
+        }
+    }
+    free(ips);
+}

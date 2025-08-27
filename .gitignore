@@ -22,3 +22,4 @@ obj/
 get_interface_tocheck
 out
 test.c
+test_ips.txt
