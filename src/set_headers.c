@@ -72,7 +72,7 @@ void set_ip_header(struct ip *ip, const char *src_ip, struct sockaddr_in *target
     ip->ip_p = IPPROTO_TCP;
     ip->ip_src.s_addr = inet_addr(src_ip);
     ip->ip_dst = target->sin_addr;
-    ip->ip_sum = 0; // Will be calculated later
+    ip->ip_sum = 0;
 }
 
 void set_tcp_header(struct tcphdr *tcp, scan_type target_type) {
@@ -83,13 +83,23 @@ void set_tcp_header(struct tcphdr *tcp, scan_type target_type) {
     tcp->th_seq = htonl(rand());
     tcp->th_ack = 0;
     tcp->th_off = 6;
-	tcp->syn = (target_type & SCAN_SYN) ? 1 : 0;
-    tcp->fin = (target_type & SCAN_FIN) ? 1 : 0;
-	tcp->rst = 0;
-	tcp->ack = (target_type & SCAN_ACK) ? 1 : 0;
     tcp->th_win = htons(1024);
     tcp->th_urp = 0;
-    tcp->th_sum = 0; // Will be calculated later
+    tcp->th_sum = 0;
+    if (target_type & SCAN_SYN) {
+        tcp->th_flags |= TH_SYN;
+    }
+    if (target_type & SCAN_ACK) {
+        tcp->th_flags |= TH_ACK;
+    }
+    if (target_type & SCAN_FIN) {
+        tcp->th_flags |= TH_FIN;
+    }
+    if (target_type & SCAN_XMAS) {
+        tcp->th_flags |= (TH_FIN | TH_URG | TH_PUSH);
+    }
+
+
 }
 
 void set_psudo_header(struct pseudo_header *psh, const char *src_ip, struct sockaddr_in *target) {
