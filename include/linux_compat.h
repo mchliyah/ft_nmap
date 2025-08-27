@@ -37,13 +37,18 @@ struct tcphdr_linux {
     uint32_t th_ack;     // acknowledgment number (BSD style) - also accessible as 'ack_seq'
     uint16_t res1:4;
     uint16_t th_off:4;   // data offset (BSD style) - also accessible as 'doff'
-    uint16_t fin:1;      // Linux style flags
-    uint16_t syn:1;
-    uint16_t rst:1;
-    uint16_t psh:1;
-    uint16_t ack:1;
-    uint16_t urg:1;
-    uint16_t res2:2;
+    union {
+        struct {
+            uint16_t fin:1;      // Linux style flags
+            uint16_t syn:1;
+            uint16_t rst:1;
+            uint16_t psh:1;
+            uint16_t ack:1;
+            uint16_t urg:1;
+            uint16_t res2:2;
+        };
+        uint8_t th_flags;    // BSD style flags field
+    };
     uint16_t th_win;     // window size (BSD style) - also accessible as 'window'
     uint16_t th_sum;     // checksum (BSD style) - also accessible as 'check'
     uint16_t th_urp;     // urgent pointer (BSD style) - also accessible as 'urg_ptr'

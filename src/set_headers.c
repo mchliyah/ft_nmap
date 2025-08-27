@@ -86,6 +86,7 @@ void set_tcp_header(struct tcphdr *tcp, scan_type target_type) {
     tcp->th_win = htons(1024);
     tcp->th_urp = 0;
     tcp->th_sum = 0;
+    tcp->th_flags = 0;  // Initialize flags field to 0
     if (target_type & SCAN_SYN) {
         tcp->th_flags |= TH_SYN;
     }
@@ -98,8 +99,6 @@ void set_tcp_header(struct tcphdr *tcp, scan_type target_type) {
     if (target_type & SCAN_XMAS) {
         tcp->th_flags |= (TH_FIN | TH_URG | TH_PUSH);
     }
-
-
 }
 
 void set_psudo_header(struct pseudo_header *psh, const char *src_ip, struct sockaddr_in *target) {
