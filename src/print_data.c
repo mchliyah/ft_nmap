@@ -10,7 +10,7 @@ void print_help(void) {
     printf("  --ip [IP]\t\t\tIP address to scan\n");
     printf("  --file [filename]\t\tRead IPs from file\n");
     printf("  --speedup [N]\t\t\tNumber of threads (max 250)\n");
-    printf("  --scan [TYPES]\t\tScan types: SYN, NULL, FIN, XMAS, ACK, UDP\n");
+    printf("  --scan [TYPES]\t\tScan types: SYN (S), NULL (N), FIN (F), XMAS (X), ACK (A), UDP (U)\n");
     exit(0);
 }
 
