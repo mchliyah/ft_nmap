@@ -20,6 +20,7 @@ void send_syn(scan_thread_data *data ,t_port *current, struct tcphdr *tcp, struc
         //        dst_ip_str, current->port, ntohs(ip->ip_len), ip->ip_ttl, tcp->th_flags);
         
         // Send packet (IP header + TCP header + options)
+        current->tcp_udp = "tcp";
         if (sendto(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
                    (struct sockaddr *)&target, sizeof(target)) < 0)
             perror("sendto");
@@ -34,7 +35,7 @@ void send_null(scan_thread_data *data, t_port *current, struct tcphdr *tcp, stru
     ip->ip_sum = csum((u_short *)ip, sizeof(struct ip) / 2);
     tcp->th_sum = 0;
     tcp->th_sum = calculate_tcp_checksum(ip, tcp, tcp_options, 4);
-
+    current->tcp_udp = "tcp";
     if (sendto(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
                (struct sockaddr *)&target, sizeof(target)) < 0)
         perror("sendto NULL");
@@ -51,7 +52,7 @@ void send_fin(scan_thread_data *data, t_port *current, struct tcphdr *tcp, struc
 
     tcp->th_sum = 0;
     tcp->th_sum = calculate_tcp_checksum(ip, tcp, tcp_options, 4);
-
+    current->tcp_udp = "tcp";
     if (sendto(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
                (struct sockaddr *)&target, sizeof(target)) < 0)
         perror("sendto FIN");
@@ -67,6 +68,7 @@ void send_xmas(scan_thread_data *data, t_port *current, struct tcphdr *tcp, stru
 
     tcp->th_sum = 0;
     tcp->th_sum = calculate_tcp_checksum(ip, tcp, tcp_options, 4);
+    current->tcp_udp = "tcp";
     if (sendto(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
                (struct sockaddr *)&target, sizeof(target)) < 0)
         perror("sendto XMAS");
@@ -82,7 +84,7 @@ void send_ack(scan_thread_data *data, t_port *current, struct tcphdr *tcp, struc
 
     tcp->th_sum = 0;
     tcp->th_sum = calculate_tcp_checksum(ip, tcp, tcp_options, 4);
-
+    current->tcp_udp = "tcp";
     if (sendto(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
                (struct sockaddr *)&target, sizeof(target)) < 0)
         perror("sendto ACK");
@@ -103,7 +105,7 @@ void send_udp(scan_thread_data *data, t_port *current, struct ip *ip, struct soc
 
     ip->ip_sum = 0;
     ip->ip_sum = csum((u_short *)ip, sizeof(struct ip) / 2);
-    
+    current->tcp_udp = "udp";
     if (sendto(data->sock, datagram, sizeof(struct ip) + sizeof(struct udphdr), 0,
                (struct sockaddr *)&target, sizeof(target)) < 0) {
         perror("sendto UDP");

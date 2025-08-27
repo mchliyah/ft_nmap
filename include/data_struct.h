@@ -81,6 +81,7 @@ typedef struct t_port{
     int port;
     port_state state;
     const char *service;
+    const char *tcp_udp;
     struct t_port *next;
 } t_port;
 
