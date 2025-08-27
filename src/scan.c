@@ -18,6 +18,7 @@ void start_sender_threads(int sock, pthread_t *threads, scan_thread_data *thread
     int remaining_ports = g_config.port_count % g_config.speedup;
     int start_range = 0;
     t_port *current = g_config.port_list;
+
     // int thread_created = 0;
 
     for (int i = 0; i < g_config.speedup; i++) {
@@ -28,7 +29,6 @@ void start_sender_threads(int sock, pthread_t *threads, scan_thread_data *thread
             .start_range = start_range,
             .end_range = start_range + ports_per_thread + (i < remaining_ports ? 1 : 0)
         };
-        // printf("default port state: %s\n", port_state_to_string(current->state));
         if (pthread_create(&threads[i], NULL, scan_thread, &thread_data[i]) != 0) {
             perror("pthread_create");
             exit(EXIT_FAILURE);
@@ -129,7 +129,6 @@ void run_scan() {
     // printf("Waiting for scanning threads to complete...\n");
     for (int i = 0; i < g_config.speedup; i++) {
         pthread_join(threads[i], NULL);
-        // printf("Thread %d completed\n", i);
     }
 
     close(sock);

@@ -80,7 +80,7 @@ typedef struct t_scan_types {
 typedef struct t_port{
     int port;
     port_state state;
-    char *service;
+    const char *service;
     struct t_port *next;
 } t_port;
 

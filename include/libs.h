@@ -24,5 +24,8 @@
 #include <linux/if_packet.h>
 #endif
 #include <net/ethernet.h>
+#include <netinet/udp.h>
+#include <ctype.h>
 #include "linux_compat.h"
+
 

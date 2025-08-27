@@ -2,8 +2,8 @@
 
 // Parse port ranges like "80,443,1000-2000" , and default scan to SYN-SCAn
 void parse_ports() {
-    if (!g_config.ports && (!g_config.scan_type_count || g_config.scan_types.syn == SCAN_SYN)) {
-        // Default ports 1-1024
+    // if (!g_config.ports && (!g_config.scan_type_count || g_config.scan_types.syn == SCAN_SYN))
+    if (!g_config.ports) { // i do not remember why i set the previes conditions 
         for (int i = 1; i <= 1024; i++) add_port(i, STATE_FILTERED);
         return;
     }
@@ -51,18 +51,16 @@ void set_scan_type(t_port *port, scan_type scan_type)
 }
 // Parse scan types like "SYN,NULL,FIN"
 void parse_scan_types() {
-
     if (!g_config.scans)
     {
-        // Default to SYN scan
         g_config.scan_types.syn = SCAN_SYN;
+        g_config.scan_type_count = 1;
         return;
     }
 
     char *token = strtok(g_config.scans, ",");
     while (token)
     {
-        fprintf(stderr, "Parsed scan type: %s\n", token);
         if (strcmp(token, "S") == 0) {
             g_config.scan_types.syn = SCAN_SYN;
         } else if (strcmp(token, "N") == 0) {
