@@ -1,5 +1,56 @@
 #include "../include/ft_nmap.h"
 
+// Function to resolve hostname to IP address
+char* resolve_hostname(const char* hostname) {
+    struct addrinfo hints, *result;
+    char* ip_str = NULL;
+    
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET; // IPv4
+    hints.ai_socktype = SOCK_STREAM;
+    
+    int status = getaddrinfo(hostname, NULL, &hints, &result);
+    if (status != 0) {
+        fprintf(stderr, "Error: Failed to resolve hostname '%s': %s\n", 
+                hostname, gai_strerror(status));
+        return NULL;
+    }
+    
+    if (result && result->ai_addr) {
+        struct sockaddr_in* addr_in = (struct sockaddr_in*)result->ai_addr;
+        ip_str = malloc(INET_ADDRSTRLEN);
+        if (ip_str) {
+            inet_ntop(AF_INET, &(addr_in->sin_addr), ip_str, INET_ADDRSTRLEN);
+            printf("Resolved %s to %s\n", hostname, ip_str);
+        }
+    }
+    
+    freeaddrinfo(result);
+    printf("ip_str: %s\n", ip_str);
+    return ip_str;
+}
+
+// Function to check if a string is a valid IP address
+int is_valid_ip(const char* str) {
+    struct sockaddr_in sa;
+    return inet_pton(AF_INET, str, &(sa.sin_addr)) == 1;
+}
+
+// Function to process IP or hostname and return IP address
+char* process_target(const char* target) {
+    if (is_valid_ip(target)) {
+        // It's already an IP address, return a copy
+        char* ip_copy = malloc(strlen(target) + 1);
+        if (ip_copy) {
+            strcpy(ip_copy, target);
+        }
+        return ip_copy;
+    } else {
+        // It's a hostname, resolve it
+        return resolve_hostname(target);
+    }
+}
+
 const char* get_interface_ip(const char *target_ip) {
     struct ifaddrs *ifaddr, *ifa;
     uint32_t target = inet_addr(target_ip);
@@ -168,26 +219,15 @@ char** read_ips_from_file(const char* filename, int* count) {
             continue;
         }
         
-        // Validate IP format (basic check)
-        struct sockaddr_in sa;
-        if (inet_pton(AF_INET, line, &(sa.sin_addr)) != 1) {
-            fprintf(stderr, "Warning: Invalid IP address format '%s', skipping\n", line);
+        // Try to resolve hostname/IP
+        char* resolved_ip = process_target(line);
+        if (!resolved_ip) {
+            fprintf(stderr, "Warning: Failed to resolve target '%s', skipping\n", line);
             continue;
         }
         
-        // Allocate and store IP
-        ips[index] = malloc(strlen(line) + 1);
-        if (!ips[index]) {
-            fprintf(stderr, "Error: Failed to allocate memory for IP address\n");
-            // Clean up previously allocated IPs
-            for (int i = 0; i < index; i++) {
-                free(ips[i]);
-            }
-            free(ips);
-            fclose(file);
-            return NULL;
-        }
-        strcpy(ips[index], line);
+        // Allocate and store resolved IP
+        ips[index] = resolved_ip;
         index++;
     }
     

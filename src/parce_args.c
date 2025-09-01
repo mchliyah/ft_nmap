@@ -24,10 +24,17 @@ void parse_args(int argc, char **argv) {
            (struct option *)long_options, NULL)) != -1) {
         switch (opt) {
             case 'h': print_help(); exit(0);
-            case 'i': 
-                g_config.ip = optarg; 
+            case 'i': {
+                // Process the target (could be IP or hostname)
+                char* resolved_ip = process_target(optarg);
+                if (!resolved_ip) {
+                    fprintf(stderr, "Error: Failed to resolve target '%s'\n", optarg);
+                    exit(1);
+                }
+                g_config.ip = resolved_ip; 
                 ip_mode = 1;
                 break;
+            }
             case 'p': g_config.ports = optarg; break;
             case 'f': g_config.file = optarg; break;
             case 's': g_config.scans = optarg; break;
@@ -52,10 +59,19 @@ void parse_args(int argc, char **argv) {
         ip_list[0] = malloc(strlen(g_config.ip) + 1);
         strcpy(ip_list[0], g_config.ip);
         
-        // Store additional IPs
+        // Store additional IPs/hostnames
         for (int i = 1; i < total_ips; i++) {
-            ip_list[i] = malloc(strlen(argv[optind + i - 1]) + 1);
-            strcpy(ip_list[i], argv[optind + i - 1]);
+            char* resolved_ip = process_target(argv[optind + i - 1]);
+            if (!resolved_ip) {
+                fprintf(stderr, "Error: Failed to resolve target '%s'\n", argv[optind + i - 1]);
+                // Clean up previously allocated IPs
+                for (int j = 0; j < i; j++) {
+                    free(ip_list[j]);
+                }
+                free(ip_list);
+                exit(1);
+            }
+            ip_list[i] = resolved_ip;
         }
         
         // Store in config
