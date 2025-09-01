@@ -38,6 +38,11 @@ void print_debug(void);
 char** read_ips_from_file(const char* filename, int* count);
 void free_ip_array(char** ips, int count);
 
+// hostname resolution functions
+char* resolve_hostname(const char* hostname);
+int is_valid_ip(const char* str);
+char* process_target(const char* target);
+
 // service 
 
 const char *get_service_by_port(int port);
