@@ -23,6 +23,7 @@
 #include <net/ethernet.h>
 #include <netinet/udp.h>
 #include <ctype.h>
+#include <stdbool.h>
 #ifdef __linux__
 #include <linux/if_packet.h>
 #endif

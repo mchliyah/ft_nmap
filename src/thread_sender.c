@@ -1,29 +1,26 @@
 #include "../include/ft_nmap.h"
 
+void    send_to(int sock, char *datagram, size_t len, int flags, struct sockaddr *dest_addr, socklen_t addrlen) {
+    if (sendto(sock, datagram, len, flags, dest_addr, addrlen) < 0) {
+        perror("sendto");
+        exit(EXIT_FAILURE);
+    }
+}
+
 void send_syn(scan_thread_data *data ,t_port *current, struct tcphdr *tcp, struct ip *ip, struct sockaddr_in target, char *datagram, uint8_t *tcp_options) {
 
         set_tcp_header(tcp, SCAN_SYN);
         tcp->th_dport = htons(current->port);
         
         ip->ip_sum = 0;
-        ip->ip_sum = csum((u_short *)ip, sizeof(struct ip) / 2);
+        ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
         
         tcp->th_sum = 0;
         tcp->th_sum = calculate_tcp_checksum(ip, tcp, tcp_options, 4);
-        
-        // Debug output
-        // char src_ip_str[INET_ADDRSTRLEN], dst_ip_str[INET_ADDRSTRLEN];
-        // inet_ntop(AF_INET, &ip->ip_src, src_ip_str, INET_ADDRSTRLEN);
-        // inet_ntop(AF_INET, &ip->ip_dst, dst_ip_str, INET_ADDRSTRLEN);
-        
-        // printf("Sending to %s:%d - IP len: %d, TTL: %d, TCP flags: 0x%02x\n", 
-        //        dst_ip_str, current->port, ntohs(ip->ip_len), ip->ip_ttl, tcp->th_flags);
-        
-        // Send packet (IP header + TCP header + options)
+
         current->tcp_udp = "tcp";
-        if (sendto(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
-                   (struct sockaddr *)&target, sizeof(target)) < 0)
-            perror("sendto");
+        send_to(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
+                   (struct sockaddr *)&target, sizeof(target));
 
 }
 
@@ -32,13 +29,12 @@ void send_null(scan_thread_data *data, t_port *current, struct tcphdr *tcp, stru
     set_tcp_header(tcp, SCAN_NULL);
     tcp->th_dport = htons(current->port);
     ip->ip_sum = 0;
-    ip->ip_sum = csum((u_short *)ip, sizeof(struct ip) / 2);
+    ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
     tcp->th_sum = 0;
     tcp->th_sum = calculate_tcp_checksum(ip, tcp, tcp_options, 4);
     current->tcp_udp = "tcp";
-    if (sendto(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
-               (struct sockaddr *)&target, sizeof(target)) < 0)
-        perror("sendto NULL");
+    send_to(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
+             (struct sockaddr *)&target, sizeof(target));
 }
 
 
@@ -48,14 +44,13 @@ void send_fin(scan_thread_data *data, t_port *current, struct tcphdr *tcp, struc
     tcp->th_dport = htons(current->port);
 
     ip->ip_sum = 0;
-    ip->ip_sum = csum((u_short *)ip, sizeof(struct ip) / 2);
+    ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
 
     tcp->th_sum = 0;
     tcp->th_sum = calculate_tcp_checksum(ip, tcp, tcp_options, 4);
     current->tcp_udp = "tcp";
-    if (sendto(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
-               (struct sockaddr *)&target, sizeof(target)) < 0)
-        perror("sendto FIN");
+    send_to(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
+             (struct sockaddr *)&target, sizeof(target));
 }
 
 void send_xmas(scan_thread_data *data, t_port *current, struct tcphdr *tcp, struct ip *ip, struct sockaddr_in target, char *datagram, uint8_t *tcp_options) {
@@ -64,14 +59,13 @@ void send_xmas(scan_thread_data *data, t_port *current, struct tcphdr *tcp, stru
     tcp->th_dport = htons(current->port);
 
     ip->ip_sum = 0;
-    ip->ip_sum = csum((u_short *)ip, sizeof(struct ip) / 2);
+    ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
 
     tcp->th_sum = 0;
     tcp->th_sum = calculate_tcp_checksum(ip, tcp, tcp_options, 4);
     current->tcp_udp = "tcp";
-    if (sendto(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
-               (struct sockaddr *)&target, sizeof(target)) < 0)
-        perror("sendto XMAS");
+    send_to(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
+             (struct sockaddr *)&target, sizeof(target));
 }
 
 void send_ack(scan_thread_data *data, t_port *current, struct tcphdr *tcp, struct ip *ip, struct sockaddr_in target, char *datagram, uint8_t *tcp_options) {
@@ -80,14 +74,13 @@ void send_ack(scan_thread_data *data, t_port *current, struct tcphdr *tcp, struc
     tcp->th_dport = htons(current->port);
 
     ip->ip_sum = 0;
-    ip->ip_sum = csum((u_short *)ip, sizeof(struct ip) / 2);
+    ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
 
     tcp->th_sum = 0;
     tcp->th_sum = calculate_tcp_checksum(ip, tcp, tcp_options, 4);
     current->tcp_udp = "tcp";
-    if (sendto(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
-               (struct sockaddr *)&target, sizeof(target)) < 0)
-        perror("sendto ACK");
+    send_to(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
+             (struct sockaddr *)&target, sizeof(target));
 }
 
 void send_udp(scan_thread_data *data, t_port *current, struct ip *ip, struct sockaddr_in target, char *datagram) {
@@ -104,7 +97,7 @@ void send_udp(scan_thread_data *data, t_port *current, struct ip *ip, struct soc
     ip->ip_len = htons(sizeof(struct ip) + sizeof(struct udphdr));
 
     ip->ip_sum = 0;
-    ip->ip_sum = csum((u_short *)ip, sizeof(struct ip) / 2);
+    ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
     current->tcp_udp = "udp";
     if (sendto(data->sock, datagram, sizeof(struct ip) + sizeof(struct udphdr), 0,
                (struct sockaddr *)&target, sizeof(target)) < 0) {

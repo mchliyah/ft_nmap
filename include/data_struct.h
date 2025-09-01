@@ -53,7 +53,7 @@ typedef enum port_state {
     .scan_type_count     =  0,    \
     .scan_complete       =  0,    \
     .scan_start_time     =  0,    \
-    .timeout             =  5,    \
+    .timeout             =  10,    \
     .scan_types          =  INIT_SCAN_TYPES(), \
     .cond                =  PTHREAD_COND_INITIALIZER, \
     .port_mutex          =  PTHREAD_MUTEX_INITIALIZER, \
@@ -78,10 +78,11 @@ typedef struct t_scan_types {
 } scan_type_t;
 
 typedef struct t_port{
-    int port;
-    port_state state;
+    int         port;
+    port_state  state;
     const char *service;
     const char *tcp_udp;
+    bool        to_print;
     struct t_port *next;
 } t_port;
 
@@ -89,8 +90,8 @@ typedef struct t_port{
 
 typedef struct {
     char *ip;
-    char **ip_list;      // Array of IP addresses for multi-IP support
-    int ip_count;        // Number of IP addresses
+    char **ip_list;
+    int ip_count;
     char *file;
     char *ports;
     char *scans;
