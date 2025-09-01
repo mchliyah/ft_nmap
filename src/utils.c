@@ -26,7 +26,6 @@ char* resolve_hostname(const char* hostname) {
     }
     
     freeaddrinfo(result);
-    printf("ip_str: %s\n", ip_str);
     return ip_str;
 }
 
