@@ -100,6 +100,7 @@ void add_port(int port, int state) {
     }
     new_port->port = port;
     new_port->state = state;
+    new_port->to_print = false;
     new_port->service = get_service_by_port(port);
     new_port->next = NULL;
 

@@ -71,7 +71,7 @@ void timeout_scan_result( pthread_t global_listener) {
         int additional_wait = 3;
         time_t wait_start = time(NULL);
         while (!g_config.scan_complete && (time(NULL) - wait_start) < additional_wait) {
-            if ((time(NULL) - g_config.scan_start_time) > 30) {
+            if ((time(NULL) - g_config.scan_start_time) > g_config.timeout) {
                 printf("Overall timeout reached\n");
                 break;
             }

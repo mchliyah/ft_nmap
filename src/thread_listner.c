@@ -38,15 +38,18 @@ void process_packet(unsigned char *user, const struct pcap_pkthdr *header, const
         {
             if (tcph->syn && tcph->ack){
                 current->state = STATE_OPEN;
+                current->to_print = true;
                 if (data_len > 0 && current->service == NULL) {
                     current->service = extract_service_from_payload(tcpdata, data_len, current->port);
                 }
             }
             else if (tcph->rst){
                 current->state = STATE_CLOSED;
+                current->to_print = true;
             }
             else if (tcph->fin){
                 current->state = STATE_FILTERED;
+                current->to_print = true;
             }
         }
         current = current->next;
@@ -99,7 +102,7 @@ void *start_listner()
         if (pd == 0)
         {
             timeout_count++;
-            if (timeout_count >= 3)
+            if (timeout_count >= g_config.timeout)
             {
                 printf("Listener timeout reached\n");
                 break;
