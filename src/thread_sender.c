@@ -90,14 +90,11 @@ void send_packets(scan_thread_data *data, t_port *current_port, char *datagram, 
 
     int start = data->start_range;
     while (current_port && start < data->end_range) {
-        V_PRINT(3, "Thread %d: Sending probes to %s:%d\n", 
-                data->thread_id, inet_ntoa(data->target.sin_addr), current_port->port);
         struct sockaddr_in target = {
             .sin_family = AF_INET,
             .sin_port = htons(current_port->port),
             .sin_addr = { .s_addr = inet_addr(g_config.ip) }
         };
-        int packet_count = 0;
         set_ip_header(ip, src_ip, &target);
         for (int scan = 0; scan < g_config.scan_type_count; scan++) {
             if (g_config.scan_types.syn & SCAN_SYN) send_syn(data, current_port, tcp, ip, target, datagram, tcp_options);
@@ -111,7 +108,6 @@ void send_packets(scan_thread_data *data, t_port *current_port, char *datagram, 
         current_port = current_port->next;
         start++;
         pthread_mutex_unlock(&g_config.port_mutex);
-        V_PRINT(2, "Thread %d: Sent %d packets\n", data->thread_id, packet_count);
     }
 
 
