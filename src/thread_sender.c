@@ -110,34 +110,53 @@ void send_udp(scan_thread_data *data, t_port *current, struct ip *ip, struct soc
 void send_packets(scan_thread_data *data, t_port *current_port, char *datagram, struct tcphdr *tcp, struct ip *ip, uint8_t *tcp_options, const char *src_ip) {
 
     int start = data->start_range;
-
     while (current_port && start < data->end_range) {
-        // fprintf(stderr, "Thread %d scanning ports %d to %d\n", data->thread_id, start, end);
+        V_PRINT(3, "Thread %d: Sending probes to %s:%d\n", 
+                data->thread_id, inet_ntoa(data->target.sin_addr), current_port->port);
         struct sockaddr_in target = {
             .sin_family = AF_INET,
             .sin_port = htons(current_port->port),
             .sin_addr = { .s_addr = inet_addr(g_config.ip) }
         };
-        // fprintf(stderr, "Sending packet to %s:%d\n", inet_ntoa(target.sin_addr), current_port->port);
+        int packet_count = 0;
         set_ip_header(ip, src_ip, &target);
         for (int scan = 0; scan < g_config.scan_type_count; scan++) {
-            if (g_config.scan_types.syn & SCAN_SYN)
+            if (g_config.scan_types.syn & SCAN_SYN){
+                V_PRINT(3, "Thread %d: Sending SYN probe to port %d\n", 
+                        data->thread_id, current_port->port);
                 send_syn(data, current_port, tcp, ip, target, datagram, tcp_options);
-            else if (g_config.scan_types.null & SCAN_NULL)
+            }
+            else if (g_config.scan_types.null & SCAN_NULL){
+                V_PRINT(3, "Thread %d: Sending NULL probe to port %d\n", 
+                        data->thread_id, current_port->port);
                 send_null(data, current_port, tcp, ip, target, datagram, tcp_options);
-            else if (g_config.scan_types.fin & SCAN_FIN)
+            }
+            else if (g_config.scan_types.fin & SCAN_FIN){
+                V_PRINT(3, "Thread %d: Sending FIN probe to port %d\n", 
+                        data->thread_id, current_port->port);
                 send_fin(data, current_port, tcp, ip, target, datagram, tcp_options);
-            else if (g_config.scan_types.xmas & SCAN_XMAS)
+            }
+            else if (g_config.scan_types.xmas & SCAN_XMAS){
+                V_PRINT(3, "Thread %d: Sending XMAS probe to port %d\n", 
+                        data->thread_id, current_port->port);
                 send_xmas(data, current_port, tcp, ip, target, datagram, tcp_options);
-            else if (g_config.scan_types.ack & SCAN_ACK)
-                    send_ack(data, current_port, tcp, ip, target, datagram, tcp_options);
-            else if (g_config.scan_types.udp & SCAN_UDP)
+            }
+            else if (g_config.scan_types.ack & SCAN_ACK){
+                V_PRINT(3, "Thread %d: Sending ACK probe to port %d\n", 
+                        data->thread_id, current_port->port);
+                send_ack(data, current_port, tcp, ip, target, datagram, tcp_options);
+            }
+            else if (g_config.scan_types.udp & SCAN_UDP){
+                V_PRINT(3, "Thread %d: Sending UDP probe to port %d\n", 
+                        data->thread_id, current_port->port);
                 send_udp(data, current_port, ip, target, datagram);
+            }
         }
         pthread_mutex_lock(&g_config.port_mutex);
         current_port = current_port->next;
         start++;
         pthread_mutex_unlock(&g_config.port_mutex);
+        V_PRINT(2, "Thread %d: Sent %d packets\n", data->thread_id, packet_count);
     }
 
 
@@ -155,6 +174,8 @@ uint8_t *set_options(char *datagram) {
 void *scan_thread(void *arg) {
 
     scan_thread_data *data = (scan_thread_data *)arg;
+    V_PRINT(1, "Thread %d: Starting scan of ports %d to %d\n", 
+        data->thread_id, data->start_range, data->end_range);
     pthread_mutex_lock(&g_config.port_mutex);
     t_port *current_port = data->current;
     if (!current_port) {
@@ -178,6 +199,11 @@ void *scan_thread(void *arg) {
     uint8_t *tcp_options = set_options(datagram);
 
 
+    V_PRINT(2, "Thread %d: Using source IP %s\n", data->thread_id, src_ip);
+
     send_packets(data, current_port, datagram, tcp, ip, tcp_options, src_ip);
+    
+    V_PRINT(1, "Thread %d: Completed scanning %d ports\n", 
+            data->thread_id, data->end_range - data->start_range + 1);
     return NULL;
 }
