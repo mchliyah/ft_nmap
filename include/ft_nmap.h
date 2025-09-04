@@ -48,4 +48,10 @@ char* process_target(const char* target);
 const char *get_service_by_port(int port);
 const char *extract_service_from_payload(const unsigned char *payload, size_t payload_len, int port);   
 
+
+const char* get_current_time_short();
+const char* get_scan_type_name();
+const char* get_current_time();
+double get_elapsed_time();
+const char* get_reverse_dns(const char *ip);
 #endif

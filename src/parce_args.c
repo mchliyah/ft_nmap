@@ -21,7 +21,7 @@ void parse_args(int argc, char **argv) {
     int opt;
     int ip_mode = 0; // Track if we're collecting IPs
     
-    while ((opt = getopt_long(argc, argv, "hi:p:f:s:S:v:", 
+    while ((opt = getopt_long(argc, argv, "hi:p:f:s:S:v", 
            (struct option *)long_options, NULL)) != -1) {
         switch (opt) {
             case 'h': print_help(); exit(0);
@@ -36,7 +36,12 @@ void parse_args(int argc, char **argv) {
                 ip_mode = 1;
                 break;
             }
-            case 'v': g_config.verbos++; break;
+            case 'v': 
+            {
+                printf("Increasing verbosity level to %d\n", g_config.verbose + 1);
+                g_config.verbose++; 
+                break;
+            }
             case 'p': g_config.ports = optarg; break;
             case 'f': g_config.file = optarg; break;
             case 's': g_config.scans = optarg; break;
