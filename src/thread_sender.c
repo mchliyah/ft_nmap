@@ -1,24 +1,21 @@
 #include "../include/ft_nmap.h"
 
 void    send_to(int sock, char *datagram, size_t len, int flags, struct sockaddr *dest_addr, socklen_t addrlen) {
+
+    pthread_mutex_lock(&g_config.socket_mutex);
     if (sendto(sock, datagram, len, flags, dest_addr, addrlen) < 0) {
         perror("sendto");
         exit(EXIT_FAILURE);
     }
+    pthread_mutex_unlock(&g_config.socket_mutex);
 }
 
 void send_syn(scan_thread_data *data ,t_port *current, struct tcphdr *tcp, struct ip *ip, struct sockaddr_in target, char *datagram, uint8_t *tcp_options) {
 
         set_tcp_header(tcp, SCAN_SYN);
         tcp->th_dport = htons(current->port);
-        
-        ip->ip_sum = 0;
         ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
-        
-        tcp->th_sum = 0;
         tcp->th_sum = calculate_tcp_checksum(ip, tcp, tcp_options, 4);
-
-        current->tcp_udp = "tcp";
         send_to(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
                    (struct sockaddr *)&target, sizeof(target));
 
@@ -28,11 +25,8 @@ void send_null(scan_thread_data *data, t_port *current, struct tcphdr *tcp, stru
     
     set_tcp_header(tcp, SCAN_NULL);
     tcp->th_dport = htons(current->port);
-    ip->ip_sum = 0;
     ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
-    tcp->th_sum = 0;
     tcp->th_sum = calculate_tcp_checksum(ip, tcp, tcp_options, 4);
-    current->tcp_udp = "tcp";
     send_to(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
              (struct sockaddr *)&target, sizeof(target));
 }
@@ -42,13 +36,8 @@ void send_fin(scan_thread_data *data, t_port *current, struct tcphdr *tcp, struc
 
     set_tcp_header(tcp, SCAN_FIN);
     tcp->th_dport = htons(current->port);
-
-    ip->ip_sum = 0;
     ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
-
-    tcp->th_sum = 0;
     tcp->th_sum = calculate_tcp_checksum(ip, tcp, tcp_options, 4);
-    current->tcp_udp = "tcp";
     send_to(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
              (struct sockaddr *)&target, sizeof(target));
 }
@@ -57,13 +46,8 @@ void send_xmas(scan_thread_data *data, t_port *current, struct tcphdr *tcp, stru
 
     set_tcp_header(tcp, SCAN_XMAS);
     tcp->th_dport = htons(current->port);
-
-    ip->ip_sum = 0;
     ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
-
-    tcp->th_sum = 0;
     tcp->th_sum = calculate_tcp_checksum(ip, tcp, tcp_options, 4);
-    current->tcp_udp = "tcp";
     send_to(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
              (struct sockaddr *)&target, sizeof(target));
 }
@@ -72,13 +56,8 @@ void send_ack(scan_thread_data *data, t_port *current, struct tcphdr *tcp, struc
 
     set_tcp_header(tcp, SCAN_ACK);
     tcp->th_dport = htons(current->port);
-
-    ip->ip_sum = 0;
     ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
-
-    tcp->th_sum = 0;
     tcp->th_sum = calculate_tcp_checksum(ip, tcp, tcp_options, 4);
-    current->tcp_udp = "tcp";
     send_to(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
              (struct sockaddr *)&target, sizeof(target));
 }
@@ -91,20 +70,19 @@ void send_udp(scan_thread_data *data, t_port *current, struct ip *ip, struct soc
     udp->uh_dport = htons(current->port);
     udp->uh_ulen = htons(sizeof(struct udphdr));
     udp->uh_sum = 0;
-    
     set_ip_header(ip, g_config.src_ip, &target);
     ip->ip_p = IPPROTO_UDP;
     ip->ip_len = htons(sizeof(struct ip) + sizeof(struct udphdr));
-
-    ip->ip_sum = 0;
     ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
     current->tcp_udp = "udp";
+    pthread_mutex_lock(&g_config.socket_mutex);
     if (sendto(data->sock, datagram, sizeof(struct ip) + sizeof(struct udphdr), 0,
                (struct sockaddr *)&target, sizeof(target)) < 0) {
         perror("sendto UDP");
         fprintf(stderr, "Failed to send UDP packet to %s:%d\n", 
                 inet_ntoa(target.sin_addr), current->port);
     }
+    pthread_mutex_unlock(&g_config.socket_mutex);
 }
 
 void send_packets(scan_thread_data *data, t_port *current_port, char *datagram, struct tcphdr *tcp, struct ip *ip, uint8_t *tcp_options, const char *src_ip) {
@@ -121,36 +99,12 @@ void send_packets(scan_thread_data *data, t_port *current_port, char *datagram, 
         int packet_count = 0;
         set_ip_header(ip, src_ip, &target);
         for (int scan = 0; scan < g_config.scan_type_count; scan++) {
-            if (g_config.scan_types.syn & SCAN_SYN){
-                V_PRINT(3, "Thread %d: Sending SYN probe to port %d\n", 
-                        data->thread_id, current_port->port);
-                send_syn(data, current_port, tcp, ip, target, datagram, tcp_options);
-            }
-            else if (g_config.scan_types.null & SCAN_NULL){
-                V_PRINT(3, "Thread %d: Sending NULL probe to port %d\n", 
-                        data->thread_id, current_port->port);
-                send_null(data, current_port, tcp, ip, target, datagram, tcp_options);
-            }
-            else if (g_config.scan_types.fin & SCAN_FIN){
-                V_PRINT(3, "Thread %d: Sending FIN probe to port %d\n", 
-                        data->thread_id, current_port->port);
-                send_fin(data, current_port, tcp, ip, target, datagram, tcp_options);
-            }
-            else if (g_config.scan_types.xmas & SCAN_XMAS){
-                V_PRINT(3, "Thread %d: Sending XMAS probe to port %d\n", 
-                        data->thread_id, current_port->port);
-                send_xmas(data, current_port, tcp, ip, target, datagram, tcp_options);
-            }
-            else if (g_config.scan_types.ack & SCAN_ACK){
-                V_PRINT(3, "Thread %d: Sending ACK probe to port %d\n", 
-                        data->thread_id, current_port->port);
-                send_ack(data, current_port, tcp, ip, target, datagram, tcp_options);
-            }
-            else if (g_config.scan_types.udp & SCAN_UDP){
-                V_PRINT(3, "Thread %d: Sending UDP probe to port %d\n", 
-                        data->thread_id, current_port->port);
-                send_udp(data, current_port, ip, target, datagram);
-            }
+            if (g_config.scan_types.syn & SCAN_SYN) send_syn(data, current_port, tcp, ip, target, datagram, tcp_options);
+            if (g_config.scan_types.null & SCAN_NULL) send_null(data, current_port, tcp, ip, target, datagram, tcp_options);
+            if (g_config.scan_types.fin & SCAN_FIN) send_fin(data, current_port, tcp, ip, target, datagram, tcp_options);
+            if (g_config.scan_types.xmas & SCAN_XMAS) send_xmas(data, current_port, tcp, ip, target, datagram, tcp_options);
+            if (g_config.scan_types.ack & SCAN_ACK) send_ack(data, current_port, tcp, ip, target, datagram, tcp_options);
+            if (g_config.scan_types.udp & SCAN_UDP) send_udp(data, current_port, ip, target, datagram);
         }
         pthread_mutex_lock(&g_config.port_mutex);
         current_port = current_port->next;
