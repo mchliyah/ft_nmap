@@ -7,6 +7,7 @@ void    send_to(int sock, char *datagram, size_t len, int flags, struct sockaddr
         perror("sendto");
         exit(EXIT_FAILURE);
     }
+    g_config.packets_sent++;
     pthread_mutex_unlock(&g_config.socket_mutex);
 }
 

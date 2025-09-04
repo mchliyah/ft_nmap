@@ -38,8 +38,8 @@ void parse_args(int argc, char **argv) {
             }
             case 'v': 
             {
-                printf("Increasing verbosity level to %d\n", g_config.verbos + 1);
-                g_config.verbos++; 
+                printf("Increasing verbosity level to %d\n", g_config.verbose + 1);
+                g_config.verbose++; 
                 break;
             }
             case 'p': g_config.ports = optarg; break;

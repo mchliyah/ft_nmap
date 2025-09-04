@@ -1,14 +1,14 @@
 #include "../include/ft_nmap.h"
 
 void start_thread_listner(pthread_t *global_listener) {
-    // This function will handle incoming packets and update the scan results
-    // It should be implemented to listen for responses from the target IPs
-    // puts("Starting global listener thread...");
+
+    time_t now = time(NULL);
+    V_PRINT(1, "Initiating Parallel DNS resolution of %d host\n", g_config.ip_count);
     if (pthread_create(global_listener, NULL, start_listner, NULL) != 0) {
         perror("Failed to create global listener thread");
         exit(EXIT_FAILURE);
     }
-    // puts("Global listener thread started successfully.");
+    V_PRINT(1, "Parallel DNS resolution completed in %.2f seconds\n", difftime(time(NULL), now));
 }
 
 
@@ -19,8 +19,8 @@ void start_sender_threads(int sock, pthread_t *threads, scan_thread_data *thread
     int start_range = 0;
     t_port *current = g_config.port_list;
 
-    // int thread_created = 0;
-
+    V_PRINT(1, "Initializing %s scan at %s\n", get_scan_type_name(), get_current_time_short());
+    V_PRINT(1, "Scanning %s [%d ports]\n", g_config.ip, g_config.port_count);
     for (int i = 0; i < g_config.speedup; i++) {
         thread_data[i] = (scan_thread_data){
             .sock = sock,
@@ -45,24 +45,9 @@ void start_sender_threads(int sock, pthread_t *threads, scan_thread_data *thread
 
 void cleanup(pthread_t *threads, pthread_t global_listener) {
     (void)threads;
-    // Cleanup resources after scan completion
-    // for (int i = 0; i < g_config.speedup; i++) {
-    //     pthread_cancel(threads[i]);
-    //     pthread_join(threads[i], NULL);
-    // }
-    
     pthread_cancel(global_listener);
     pthread_join(global_listener, NULL);
 
-    // Free allocated memory for ports and scan types
-    // for (int i = 0; i < g_config.scan_type_count; i++) {
-    //     if (g_config.scan_types[i]) {
-    //         free(g_config.scan_types[i]);
-    //     }
-    // }
-    // if (g_config.scan_types) {
-    //     free(g_config.scan_types);
-    // }
 }
 
 void timeout_scan_result( pthread_t global_listener) {
@@ -119,23 +104,17 @@ void run_scan() {
     pthread_t threads[g_config.speedup];
     scan_thread_data thread_data[g_config.speedup];
 
-
-    //start the thread listner 
+    time_t scan_start = time(NULL);
     start_thread_listner(&global_listener);
     usleep(100000);
-    // threads chunk sender
     int sock = set_socket();
     start_sender_threads(sock, threads, thread_data);
-    // printf("Waiting for scanning threads to complete...\n");
     for (int i = 0; i < g_config.speedup; i++) {
         pthread_join(threads[i], NULL);
     }
-
+    V_PRINT(1, "Completed %s Scan at %s, %.2fs elapsed (%d total ports)\n",
+           get_scan_type_name(), ctime(&scan_start), difftime(time(NULL), scan_start), g_config.port_count);
     close(sock);
-    // printf("All scanning threads completed\n");
-
-    // Handle timeout and results
     timeout_scan_result(global_listener);
-    // cleanup(threads, global_listener);
 
 }

@@ -1,5 +1,5 @@
 #include "libs.h"
-#include "verbos.h"
+#include "verbose.h"
 
 // scan types
 
@@ -27,7 +27,7 @@ typedef enum port_state {
 #define P_SIZE          65535
 #define MAX_SCAN_TYPES  6
 #define DEFAULT_SPEEDUP 10
-#define DEFAULT_PORTS   "1-1024"
+#define DEFAULT_PORTS   "0-1024"
 #define DEFAULT_SCANS   "S"
 
 
@@ -44,18 +44,20 @@ typedef enum port_state {
 #define INIT_CONFIG() {           \
     .ip                  =  NULL, \
     .ip_list             =  NULL, \
-    .ip_count            =  0,    \
     .file                =  NULL, \
     .ports               =  NULL, \
     .scans               =  NULL, \
     .port_list           =  NULL, \
-    .verbos              =  0,    \
+    .verbose             =  0,    \
+    .ip_count            =  0,    \
     .speedup             =  0,   \
     .port_count          =  0,    \
     .scan_type_count     =  0,    \
     .scan_complete       =  0,    \
     .scan_start_time     =  0,    \
     .timeout             =  10,    \
+    .packets_sent        =  0,    \
+    .packets_received    =  0,    \
     .scan_types          =  INIT_SCAN_TYPES(), \
     .cond                =  PTHREAD_COND_INITIALIZER, \
     .port_mutex          =  PTHREAD_MUTEX_INITIALIZER, \
@@ -97,7 +99,7 @@ typedef struct {
     char *file;
     char *ports;
     char *scans;
-    int verbos;
+    int verbose;
     int speedup;
     int port_count;
     int scan_type_count;
@@ -105,6 +107,8 @@ typedef struct {
     int timeout;
     int ports_per_thread;
     const char *src_ip;
+    int packets_sent;
+    int packets_received;
     t_port *port_list;
     scan_type_t scan_types;
     time_t scan_start_time;

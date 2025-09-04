@@ -4,8 +4,9 @@
 void parse_ports() {
     // if (!g_config.ports && (!g_config.scan_type_count || g_config.scan_types.syn == SCAN_SYN))
     if (!g_config.ports) { // i do not remember why i set the previes conditions 
-        for (int i = 1; i <= 1024; i++) add_port(i, STATE_FILTERED);
-        return;
+        g_config.ports = DEFAULT_PORTS;
+        g_config.scan_types.syn = SCAN_SYN;
+        g_config.scan_type_count = 1;
     }
 
     // Parse the ports string

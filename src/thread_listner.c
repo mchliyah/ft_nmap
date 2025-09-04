@@ -9,7 +9,7 @@ void process_packet(unsigned char *user, const struct pcap_pkthdr *header, const
     struct ip *iph = (struct ip *)(buffer + sizeof(struct ether_header));
     struct tcphdr *tcph = NULL;
     unsigned short iplen;
-
+    g_config.packets_received++;
     if (ntohs(ethh->ether_type) != ETHERTYPE_IP) {
         printf("Non-IP packet captured, skipping...\n");
         return;

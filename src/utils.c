@@ -256,3 +256,56 @@ void free_ip_array(char** ips, int count) {
     }
     free(ips);
 }
+
+
+const char* get_current_time_short() {
+    time_t now = time(NULL);
+    struct tm *tm_info = localtime(&now);
+    static char buffer[26];
+    strftime(buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+    return buffer;
+}
+
+const char* get_scan_type_name() {
+    if (g_config.scan_types.syn) return "SYN Stealth";
+    if (g_config.scan_types.null) return "NULL";
+    if (g_config.scan_types.fin) return "FIN";
+    if (g_config.scan_types.xmas) return "XMAS";
+    if (g_config.scan_types.ack) return "ACK";
+    if (g_config.scan_types.udp) return "UDP";
+    return "Unknown";
+}
+
+const char* get_reverse_dns(const char *ip) {
+    // Simplified implementation - replace with actual rDNS lookup
+    struct in_addr addr;
+    if (inet_pton(AF_INET, ip, &addr) != 1) {
+        return "invalid-ip";
+    }
+    
+    struct hostent *host = gethostbyaddr(&addr, sizeof(addr), AF_INET);
+    if (host) {
+        return host->h_name;
+    }
+    
+    return "unknown";
+}
+
+void print_scan_statistics() {
+    int open_ports = 0, filtered_ports = 0, closed_ports = 0;
+    t_port *current = g_config.port_list;
+    
+    while (current) {
+        if (current->state == STATE_OPEN) open_ports++;
+        else if (current->state == STATE_FILTERED) filtered_ports++;
+        else if (current->state == STATE_CLOSED) closed_ports++;
+        current = current->next;
+    }
+    
+    V_PRINT(1, "Not shown: %d filtered %s\n", filtered_ports, 
+           filtered_ports == 1 ? "port" : "ports");
+
+    if (g_config.verbose) {
+        printf("Raw packets sent: %d | Rcvd: %d\n", g_config.packets_sent, g_config.packets_received);
+    }
+}
