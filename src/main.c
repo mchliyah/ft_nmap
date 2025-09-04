@@ -11,7 +11,6 @@ void init_scan() {
     srand(time(NULL));
     g_config.scan_start_time = time(NULL);
     g_config.src_ip = get_interface_ip(g_config.ip);
-    printf("Starting ft_nmap at %s\n", ctime(&g_config.scan_start_time));
     printf("Nmap scan report for %s\n\n", g_config.ip);
 }
 
@@ -77,7 +76,6 @@ void initialize_config() {
     g_config.speedup = (g_config.speedup < 1) ? 1 : 
                       (g_config.speedup > 250) ? 250 : g_config.speedup;
     srand(time(NULL));
-    printf("Starting ft_nmap at %s\n", ctime(&g_config.scan_start_time));
 }
 
 void cleanup_ports() {
@@ -89,14 +87,31 @@ void cleanup_ports() {
     }
 }
 
+const char* get_current_time() {
+    time_t now = time(NULL);
+    g_config.scan_start_time = now;
+    return ctime(&now);
+}
+
+double get_elapsed_time() {
+    return difftime(time(NULL), g_config.scan_start_time);
+}
+
 int main(int argc, char **argv) {
     // Parse arguments and configuration
     parse_args(argc, argv);
+    V_PRINT(1, "Starting ft_nmap at %s\n", get_current_time());
+    V_PRINT(1, "Target: %s\n", g_config.ip);
     parse_scan_types();
     parse_ports();
+    if (g_config.ports) V_PRINT(1, "Ports: %s\n", g_config.ports);
+    
+    if (g_config.scans) V_PRINT(1, "Scan types: %s\n", g_config.scans);
     
     // Initialize scan configuration
     initialize_config();
+
+    V_PRINT(2, "Threads: %d\n", g_config.speedup);
     
     // Handle different scan modes
     if (g_config.ip_list && g_config.ip_count > 0) {
@@ -109,7 +124,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Error: No IP address or file specified\n");
         return 1;
     }
-
+    V_PRINT(1, "Scan completed in %.2f seconds\n", get_elapsed_time());
     // Cleanup
     cleanup_ports();
     return 0;

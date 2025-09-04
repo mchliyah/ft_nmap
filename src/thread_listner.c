@@ -38,13 +38,20 @@ void process_packet(unsigned char *user, const struct pcap_pkthdr *header, const
         {
             if (tcph->syn && tcph->ack){
                 current->state = STATE_OPEN;
+                V_PRINT(1, "Discovered open port %d/tcp on %s\n", 
+                        current->port, g_config.ip);
                 current->to_print = true;
                 if (data_len > 0 && current->service == NULL) {
                     current->service = extract_service_from_payload(tcpdata, data_len, current->port);
+                    if (current->service) {
+                        V_PRINT(2, "Service detection: port %d/tcp is %s\n", 
+                                current->port, current->service);
+                    }
                 }
             }
             else if (tcph->rst){
                 current->state = STATE_CLOSED;
+
                 current->to_print = true;
             }
             else if (tcph->fin){
@@ -96,28 +103,32 @@ void *start_listner()
     }
     pcap_freecode(&fp);
 
+    V_PRINT(1, "Starting listener on interface %s\n", interface);
+    V_PRINT(2, "Using filter: %s\n", filter_exp);
     int timeout_count = 0;
     while (1) {
         int pd = pcap_dispatch(handle, -1, &process_packet, NULL);
         if (pd == 0)
         {
             timeout_count++;
+            V_PRINT(3, "No packets received, timeout count: %d\n", timeout_count);
             if (timeout_count >= g_config.timeout)
             {
-                printf("Listener timeout reached\n");
+                V_PRINT(1, "No packets received for a while, listener exiting...\n");
                 break;
             }
         }
-        else if (pd == -1)
-        {
+        else if (pd == -1) {
+            V_PRINT_ERR(1, "pcap_dispatch error: ");
             pcap_perror(handle, "pcap_dispatch");
             break;
         }
-        else
-        {
+        else {
+            V_PRINT(3, "Received %d packets\n", pd);
             timeout_count = 0;
         }
     }
+    V_PRINT(1, "Listener stopped\n");
     pcap_close(handle);
     pthread_exit(NULL);
 }

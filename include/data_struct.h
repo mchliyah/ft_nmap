@@ -1,4 +1,5 @@
 #include "libs.h"
+#include "verbos.h"
 
 // scan types
 
@@ -48,6 +49,7 @@ typedef enum port_state {
     .ports               =  NULL, \
     .scans               =  NULL, \
     .port_list           =  NULL, \
+    .verbos              =  0,    \
     .speedup             =  0,   \
     .port_count          =  0,    \
     .scan_type_count     =  0,    \
@@ -95,6 +97,7 @@ typedef struct {
     char *file;
     char *ports;
     char *scans;
+    int verbos;
     int speedup;
     int port_count;
     int scan_type_count;

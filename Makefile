@@ -10,6 +10,7 @@ CFLAGS        := -Wall -Wextra -Werror
 DEBUG_FLAGS   := -g3 -O0 -fsanitize=address
 RELEASE_FLAGS := -O2
 LIBS          := -lpcap -lpthread
+MAKEFLAGS     := -j
 
 # ===== Automatic File Detection =====
 SRCS        := $(wildcard $(SRCS_DIR)/*.c)
@@ -78,7 +79,9 @@ fclean: clean
 	@rm -f $(NAME)
 	@echo "🔥 $(NAME) deleted!"
 
-re: fclean all
+re: 
+	make fclean
+	make all
 
 # ===== Dependency Inclusion =====
 # Auto-generated .d files for header changes
