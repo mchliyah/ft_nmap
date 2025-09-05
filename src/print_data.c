@@ -31,6 +31,7 @@ const char *port_state_to_string(int state) {
         case STATE_OPEN:   return "OPEN";
         case STATE_CLOSED: return "CLOSED";
         case STATE_FILTERED:return "FILTERED";
+        case STATE_OPEN_FILTERED: return "OPEN|FILTERED";
         default:          return NULL;
     }
 }

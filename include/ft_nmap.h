@@ -11,6 +11,7 @@ void print_help();
 void parse_ports();
 void parse_scan_types();
 void run_scan();
+void finalize_udp_scan();
 void print_complete_scan();
 void print_scan_result();
 void parse_args(int argc, char **argv);
