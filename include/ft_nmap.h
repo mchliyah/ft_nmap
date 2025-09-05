@@ -31,6 +31,7 @@ void set_psudo_header(struct pseudo_header *psh, const char *src_ip, struct sock
 unsigned short csum(unsigned short *ptr, int nbytes);
 uint16_t calculate_tcp_checksum(struct ip *ip, struct tcphdr *tcp, uint8_t *options, int options_len);
 void *start_listner();
+void process_icmp_packet(struct ip *iph, const struct pcap_pkthdr *header);
 uint16_t generate_source_port();
 void add_port(int port, int state);
 const char *port_state_to_string(int state);

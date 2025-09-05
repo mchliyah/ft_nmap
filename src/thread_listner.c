@@ -1,5 +1,41 @@
 #include "../include/ft_nmap.h"
 
+void process_icmp_packet(struct ip *iph, const struct pcap_pkthdr *header)
+{
+    (void)header;
+    
+    struct icmp *icmph = (struct icmp *)((char *)iph + (iph->ip_hl * 4));
+    
+    // We're interested in ICMP Destination Unreachable messages
+    if (icmph->icmp_type == ICMP_UNREACH && icmph->icmp_code == ICMP_UNREACH_PORT) {
+        // The ICMP packet contains the original IP header and first 8 bytes of the original UDP packet
+        struct ip *orig_iph = (struct ip *)((char *)icmph + 8);
+        struct udphdr *orig_udph = (struct udphdr *)((char *)orig_iph + (orig_iph->ip_hl * 4));
+        
+        uint16_t target_port = ntohs(orig_udph->uh_dport);
+        uint8_t ttl = iph->ip_ttl;
+        char reason_buffer[64];
+        
+        pthread_mutex_lock(&g_config.port_mutex);
+        t_port *current = g_config.port_list;
+        while (current) {
+            if (current->port == target_port) {
+                current->state = STATE_CLOSED;
+                if (g_config.reason) {
+                    snprintf(reason_buffer, sizeof(reason_buffer), "port-unreach ttl %d", ttl);
+                    current->reason = strdup(reason_buffer);
+                }
+                current->to_print = true;
+                V_PRINT(1, "Discovered closed port %d/udp on %s (ICMP port unreachable)\n", 
+                        current->port, g_config.ip);
+                break;
+            }
+            current = current->next;
+        }
+        pthread_mutex_unlock(&g_config.port_mutex);
+    }
+}
+
 void process_packet(unsigned char *user, const struct pcap_pkthdr *header, const unsigned char *buffer)
 {
     (void)user;
@@ -14,7 +50,14 @@ void process_packet(unsigned char *user, const struct pcap_pkthdr *header, const
         printf("Non-IP packet captured, skipping...\n");
         return;
     }
-    if (iph->ip_p != IPPROTO_TCP) {
+    
+    // Handle different protocols based on scan type
+    if (g_config.scan_types.udp && iph->ip_p == IPPROTO_ICMP) {
+        // Handle ICMP responses for UDP scans
+        process_icmp_packet(iph, header);
+        return;
+    }
+    else if (iph->ip_p != IPPROTO_TCP) {
         printf("Non-TCP packet captured, skipping...\n");
         return;
     }
@@ -104,7 +147,9 @@ void *start_listner()
         return NULL;
     }
 
-    snprintf(filter_exp, 100, "tcp and host %s", g_config.ip); //filter to get needed packets
+    snprintf(filter_exp, 100, "%s and host %s", 
+             g_config.scan_types.udp ? "(tcp or icmp)" : "tcp", 
+             g_config.ip); //filter to get needed packets
     if (pcap_compile(handle, &fp, filter_exp, 0, netmask) == -1) {
         fprintf(stderr, "Couldn't parse filter %s: %s\n",
                 filter_exp, pcap_geterr(handle));
