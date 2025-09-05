@@ -8,6 +8,7 @@ static const t_option long_options[] = {
     {"scan", required_argument, NULL, 's'},
     {"speedup", required_argument, NULL, 'S'},
     {"verbose", no_argument, NULL, 'v'},
+    {"reason", no_argument, NULL, 'r'},
     {NULL, 0, NULL, 0}
 };
 
@@ -21,7 +22,7 @@ void parse_args(int argc, char **argv) {
     int opt;
     int ip_mode = 0; // Track if we're collecting IPs
     
-    while ((opt = getopt_long(argc, argv, "hi:p:f:s:S:v", 
+    while ((opt = getopt_long(argc, argv, "hi:p:f:s:S:vr", 
            (struct option *)long_options, NULL)) != -1) {
         switch (opt) {
             case 'h': print_help(); exit(0);
@@ -42,6 +43,7 @@ void parse_args(int argc, char **argv) {
                 g_config.verbose++; 
                 break;
             }
+            case 'r': g_config.reason = 1; break;
             case 'p': g_config.ports = optarg; break;
             case 'f': g_config.file = optarg; break;
             case 's': g_config.scans = optarg; break;

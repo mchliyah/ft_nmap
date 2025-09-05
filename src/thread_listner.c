@@ -29,6 +29,10 @@ void process_packet(unsigned char *user, const struct pcap_pkthdr *header, const
     const unsigned char *tcpdata = buffer + sizeof(struct ether_header) + iplen + tcplen;
     size_t data_len = header->caplen - (sizeof(struct ether_header) + iplen + tcplen);
 
+    // Extract TTL from IP header for reason detection
+    uint8_t ttl = iph->ip_ttl;
+    char reason_buffer[64];
+
     pthread_mutex_lock(&g_config.port_mutex);
     t_port *current = g_config.port_list;
     while (current) {
@@ -38,6 +42,10 @@ void process_packet(unsigned char *user, const struct pcap_pkthdr *header, const
         {
             if (tcph->syn && tcph->ack){
                 current->state = STATE_OPEN;
+                if (g_config.reason) {
+                    snprintf(reason_buffer, sizeof(reason_buffer), "syn-ack ttl %d", ttl);
+                    current->reason = strdup(reason_buffer);
+                }
                 V_PRINT(1, "Discovered open port %d/tcp on %s\n", 
                         current->port, g_config.ip);
                 current->to_print = true;
@@ -51,11 +59,17 @@ void process_packet(unsigned char *user, const struct pcap_pkthdr *header, const
             }
             else if (tcph->rst){
                 current->state = STATE_CLOSED;
-
+                if (g_config.reason) {
+                    snprintf(reason_buffer, sizeof(reason_buffer), "reset ttl %d", ttl);
+                    current->reason = strdup(reason_buffer);
+                }
                 current->to_print = true;
             }
             else if (tcph->fin){
                 current->state = STATE_FILTERED;
+                if (g_config.reason) {
+                    current->reason = strdup("no-response");
+                }
                 current->to_print = true;
             }
         }

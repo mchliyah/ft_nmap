@@ -153,6 +153,7 @@ void add_port(int port, int state) {
     new_port->to_print = false;
     new_port->tcp_udp = "tcp";
     new_port->service = get_service_by_port(port);
+    new_port->reason = NULL;
     new_port->next = NULL;
 
     pthread_mutex_lock(&g_config.port_mutex);
