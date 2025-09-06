@@ -19,7 +19,8 @@ typedef enum port_state {
     STATE_WAITING   = 1,
     STATE_OPEN      = 2,
     STATE_CLOSED    = 3,
-    STATE_FILTERED  = 4
+    STATE_FILTERED  = 4,
+    STATE_OPEN_FILTERED = 5
 } port_state ;
 
 
@@ -49,6 +50,7 @@ typedef enum port_state {
     .scans               =  NULL, \
     .port_list           =  NULL, \
     .verbose             =  0,    \
+    .reason              =  0,    \
     .ip_count            =  0,    \
     .speedup             =  0,   \
     .port_count          =  0,    \
@@ -86,6 +88,7 @@ typedef struct t_port{
     port_state  state;
     const char *service;
     const char *tcp_udp;
+    const char *reason;
     bool        to_print;
     struct t_port *next;
 } t_port;
@@ -100,6 +103,7 @@ typedef struct {
     char *ports;
     char *scans;
     int verbose;
+    int reason;
     int speedup;
     int port_count;
     int scan_type_count;
