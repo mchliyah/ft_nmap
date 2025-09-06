@@ -4,8 +4,9 @@
 void parse_ports() {
     // if (!g_config.ports && (!g_config.scan_type_count || g_config.scan_types.syn == SCAN_SYN))
     if (!g_config.ports) { // i do not remember why i set the previes conditions 
+        V_PRINT(1, "No ports specified, defaulting to 1-1024\n");
         g_config.ports = DEFAULT_PORTS;
-        g_config.scan_types.syn = SCAN_SYN;
+        // g_config.scan_types.syn = SCAN_SYN;
         g_config.scan_type_count = 1;
     }
 
@@ -17,9 +18,22 @@ void parse_ports() {
             int start = atoi(token);
             int end = atoi(dash + 1);
             for (int p = start; p <= end; p++) {
-                add_port(p, STATE_FILTERED);
+                if (g_config.scan_types.udp == SCAN_UDP)
+                {
+                    V_PRINT(2, "Adding UDP port %d\n", p);
+                    add_port(p, STATE_CLOSED);
+                }
+                else if (g_config.scan_types.syn == SCAN_SYN)
+                    add_port(p, STATE_FILTERED);
+                else if (g_config.scan_types.null == SCAN_NULL || g_config.scan_types.fin == SCAN_FIN || g_config.scan_types.xmas == SCAN_XMAS)
+                    add_port(p, STATE_OPEN);
+                else if (g_config.scan_types.ack == SCAN_ACK)
+                    add_port(p, STATE_FILTERED);
+                else if (g_config.scan_type_count == 0)
+                    add_port(p, STATE_FILTERED);
             }
         } else {
+            PRINT_DEBUG("no scan type defaulting filtrd state");
             add_port(atoi(token), STATE_FILTERED);
         }
         token = strtok(NULL, ",");

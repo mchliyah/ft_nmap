@@ -4,7 +4,6 @@
 t_config g_config = INIT_CONFIG();
 
 void init_scan() {
-    // Ensure speedup is within valid range
     g_config.speedup = (g_config.speedup < 1) ? 1 : 
     (g_config.speedup > 250) ? 250 : g_config.speedup;
 
@@ -15,19 +14,11 @@ void init_scan() {
 }
 
 void scan_single_ip(const char* target_ip) {
-    // Set current target IP and source IP
-    g_config.ip = (char*)target_ip;  // Cast away const for compatibility
+    g_config.ip = (char*)target_ip;
     g_config.src_ip = get_interface_ip(target_ip);
-    
-    // Reset scan state for this IP
     g_config.scan_start_time = time(NULL);
     g_config.scan_complete = 0;
-    
-    printf("Nmap scan report for %s\n\n", target_ip);
-    
-    // Run the scan for this IP
     run_scan();
-    print_scan_result();
 }
 
 void handle_multi_ip_scan() {
@@ -37,8 +28,6 @@ void handle_multi_ip_scan() {
             printf("\n");
         }
     }
-    
-    // Clean up IP list
     for (int i = 0; i < g_config.ip_count; i++) {
         free(g_config.ip_list[i]);
     }
@@ -69,7 +58,6 @@ void handle_file_scan() {
 void handle_single_ip_scan() {
     init_scan();
     run_scan();
-    print_scan_result();
 }
 
 void initialize_config() {
@@ -98,22 +86,16 @@ double get_elapsed_time() {
 }
 
 int main(int argc, char **argv) {
-    // Parse arguments and configuration
-    parse_args(argc, argv);
+    parse_args(argc, argv); // args to use 
+    parse_scan_types(); // scan types first to make default ports dependence
+    parse_ports(); // port target using default scan types or target 
     V_PRINT(1, "Starting ft_nmap at %s\n", get_current_time());
     V_PRINT(1, "Target: %s\n", g_config.ip);
-    parse_scan_types();
-    parse_ports();
     if (g_config.ports) V_PRINT(1, "Ports: %s\n", g_config.ports);
-    
     if (g_config.scans) V_PRINT(1, "Scan types: %s\n", g_config.scans);
-    
-    // Initialize scan configuration
     initialize_config();
 
     V_PRINT(2, "Threads: %d\n", g_config.speedup);
-    
-    // Handle different scan modes
     if (g_config.ip_list && g_config.ip_count > 0) {
         handle_multi_ip_scan();
     } else if (g_config.file) {
@@ -124,8 +106,8 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Error: No IP address or file specified\n");
         return 1;
     }
+    print_scan_result();
     V_PRINT(1, "Scan completed in %.2f seconds\n", get_elapsed_time());
-    // Cleanup
     cleanup_ports();
     return 0;
 }

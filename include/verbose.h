@@ -23,4 +23,12 @@
         } \
     } while (0)
 
+// fprintf custum error printing ligne and error message for debug purpose
+#define PRINT_DEBUG(fmt, ...) \
+    do { \
+            pthread_mutex_lock(&g_config.print_mutex); \
+            fprintf(stderr, "DEBUG : %s:%d:%s(): \n" fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
+            pthread_mutex_unlock(&g_config.print_mutex); \
+    } while (0)
+
 #endif

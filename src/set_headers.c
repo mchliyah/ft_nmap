@@ -61,19 +61,27 @@ uint16_t calculate_tcp_checksum(struct ip *ip, struct tcphdr *tcp, uint8_t *opti
 }
 
 
-void set_ip_header(struct ip *ip, const char *src_ip, struct sockaddr_in *target) {
-    ip->ip_hl = 5; // Header length in 32-bit words (5*4=20 bytes) i've been getting 12024
+void set_ip_header(struct ip *ip, const char *src_ip, struct sockaddr_in *target, uint8_t protocol) {
+    ip->ip_hl = 5;
     ip->ip_v = 4;
     ip->ip_tos = 0;
-    ip->ip_len = htons(sizeof(struct ip) + sizeof(struct tcphdr) + 4);
+    
+    // Set length based on protocol
+    if (protocol == IPPROTO_TCP) {
+        ip->ip_len = htons(sizeof(struct ip) + sizeof(struct tcphdr) + 4);
+    } else if (protocol == IPPROTO_UDP) {
+        ip->ip_len = htons(sizeof(struct ip) + sizeof(struct udphdr));
+    }
+    
     ip->ip_id = htons(rand() & 0xFFFF);
     ip->ip_off = 0;
     ip->ip_ttl = 64;
-    ip->ip_p = IPPROTO_TCP;
+    ip->ip_p = protocol;
     ip->ip_src.s_addr = inet_addr(src_ip);
     ip->ip_dst = target->sin_addr;
     ip->ip_sum = 0;
 }
+
 
 void set_tcp_header(struct tcphdr *tcp, scan_type target_type) {
 
