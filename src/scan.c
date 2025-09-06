@@ -1,5 +1,28 @@
 #include "../include/ft_nmap.h"
 
+void finalize_udp_scan() {
+    pthread_mutex_lock(&g_config.port_mutex);
+    t_port *current = g_config.port_list;
+    
+    while (current) {
+        // For UDP scans, if port hasn't been marked for printing and has UDP protocol
+        if (!current->to_print && current->tcp_udp && strcmp(current->tcp_udp, "udp") == 0) {
+            // No response received - mark as open|filtered
+            current->state = STATE_OPEN_FILTERED;
+            current->to_print = true;
+            
+            if (g_config.reason) {
+                current->reason = strdup("no-response");
+            }
+            
+            V_PRINT(2, "UDP port %d marked as open|filtered (no response)\n", current->port);
+        }
+        current = current->next;
+    }
+    
+    pthread_mutex_unlock(&g_config.port_mutex);
+}
+
 void start_thread_listner(pthread_t *global_listener) {
 
     time_t now = time(NULL);
@@ -112,6 +135,12 @@ void run_scan() {
     for (int i = 0; i < g_config.speedup; i++) {
         pthread_join(threads[i], NULL);
     }
+    
+    // Finalize UDP scan results - mark unresponsive ports as open|filtered
+    if (g_config.scan_types.udp) {
+        finalize_udp_scan();
+    }
+    
     V_PRINT(1, "Completed %s Scan at %s, %.2fs elapsed (%d total ports)\n",
            get_scan_type_name(), ctime(&scan_start), difftime(time(NULL), scan_start), g_config.port_count);
     close(sock);

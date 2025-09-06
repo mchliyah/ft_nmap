@@ -107,11 +107,17 @@ const char* find_interface_for_target(const char *target_ip) {
         return strdup("eth0");
     }
 
+    // Check if target is localhost (127.0.0.1 or 127.x.x.x)
+    if ((target & 0xFF) == 127) {
+        freeifaddrs(ifaddr);
+        return strdup("lo");
+    }
+
     for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
         if (!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_INET)
             continue;
 
-        // Skip loopback
+        // Skip loopback for non-localhost targets
         if (strcmp(ifa->ifa_name, "lo") == 0)
             continue;
 
@@ -153,6 +159,7 @@ void add_port(int port, int state) {
     new_port->to_print = false;
     new_port->tcp_udp = "tcp";
     new_port->service = get_service_by_port(port);
+    new_port->reason = NULL;
     new_port->next = NULL;
 
     pthread_mutex_lock(&g_config.port_mutex);
