@@ -3,13 +3,14 @@
 void finalize_udp_scan() {
     pthread_mutex_lock(&g_config.port_mutex);
     t_port *current = g_config.port_list;
-    
+    // PRINT_DEBUG();
     while (current) {
         // For UDP scans, if port hasn't been marked for printing and has UDP protocol
         if (!current->to_print && current->tcp_udp && strcmp(current->tcp_udp, "udp") == 0) {
             // No response received - mark as open|filtered
             current->state = STATE_OPEN_FILTERED;
-            current->to_print = true;
+            // PRINT_DEBUG();
+            // current->to_print = true;
             
             if (g_config.reason) {
                 current->reason = strdup("no-response");

@@ -12,7 +12,7 @@ void    send_to(int sock, char *datagram, size_t len, int flags, struct sockaddr
 }
 
 void send_syn(scan_thread_data *data ,t_port *current, struct tcphdr *tcp, struct ip *ip, struct sockaddr_in target, char *datagram, uint8_t *tcp_options) {
-        set_ip_header(ip, g_config.src_ip, &target, IPPROTO_UDP);
+        set_ip_header(ip, g_config.src_ip, &target, IPPROTO_TCP);
         set_tcp_header(tcp, SCAN_SYN);
         tcp->th_dport = htons(current->port);
         ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
@@ -23,7 +23,7 @@ void send_syn(scan_thread_data *data ,t_port *current, struct tcphdr *tcp, struc
 }
 
 void send_null(scan_thread_data *data, t_port *current, struct tcphdr *tcp, struct ip *ip, struct sockaddr_in target, char *datagram, uint8_t *tcp_options) {
-    set_ip_header(ip, g_config.src_ip, &target, IPPROTO_UDP);
+    set_ip_header(ip, g_config.src_ip, &target, IPPROTO_TCP);
     set_tcp_header(tcp, SCAN_NULL);
     tcp->th_dport = htons(current->port);
     ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
@@ -34,7 +34,7 @@ void send_null(scan_thread_data *data, t_port *current, struct tcphdr *tcp, stru
 
 
 void send_fin(scan_thread_data *data, t_port *current, struct tcphdr *tcp, struct ip *ip, struct sockaddr_in target, char *datagram, uint8_t *tcp_options) {
-    set_ip_header(ip, g_config.src_ip, &target, IPPROTO_UDP);
+    set_ip_header(ip, g_config.src_ip, &target, IPPROTO_TCP);
     set_tcp_header(tcp, SCAN_FIN);
     tcp->th_dport = htons(current->port);
     ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
@@ -44,7 +44,7 @@ void send_fin(scan_thread_data *data, t_port *current, struct tcphdr *tcp, struc
 }
 
 void send_xmas(scan_thread_data *data, t_port *current, struct tcphdr *tcp, struct ip *ip, struct sockaddr_in target, char *datagram, uint8_t *tcp_options) {
-    set_ip_header(ip, g_config.src_ip, &target, IPPROTO_UDP);
+    set_ip_header(ip, g_config.src_ip, &target, IPPROTO_TCP);
     set_tcp_header(tcp, SCAN_XMAS);
     tcp->th_dport = htons(current->port);
     ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
@@ -54,7 +54,7 @@ void send_xmas(scan_thread_data *data, t_port *current, struct tcphdr *tcp, stru
 }
 
 void send_ack(scan_thread_data *data, t_port *current, struct tcphdr *tcp, struct ip *ip, struct sockaddr_in target, char *datagram, uint8_t *tcp_options) {
-    set_ip_header(ip, g_config.src_ip, &target, IPPROTO_UDP);
+    set_ip_header(ip, g_config.src_ip, &target, IPPROTO_TCP);
     set_tcp_header(tcp, SCAN_ACK);
     tcp->th_dport = htons(current->port);
     ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
@@ -63,56 +63,27 @@ void send_ack(scan_thread_data *data, t_port *current, struct tcphdr *tcp, struc
              (struct sockaddr *)&target, sizeof(target));
 }
 
-void add_udp_payload(uint16_t port, char *payload, size_t *payload_size) {
-    switch(port) {
-        case 53: // DNS query
-            memcpy(payload, "\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00", 12);
-            *payload_size = 12;
-            break;
-        case 67: // DHCP
-        case 68:
-            memcpy(payload, "\x01\x01\x06\x00", 4);
-            *payload_size = 4;
-            break;
-        case 161: // SNMP
-            memcpy(payload, "\x30\x26\x02\x01\x00\x04\x06\x70\x75\x62\x6c\x69\x63\xa0\x19\x02", 16);
-            *payload_size = 16;
-            break;
-        case 123: // NTP
-            memcpy(payload, "\x1b\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16);
-            *payload_size = 16;
-            break;
-        default:
-            // Empty payload for other ports
-            *payload_size = 0;
-    }
-}
-
 void send_udp(scan_thread_data *data, t_port *current, struct ip *ip, struct sockaddr_in target, char *datagram) {
+
     struct udphdr *udp = (struct udphdr *)(datagram + sizeof(struct ip));
-    char payload[1024];
-    size_t payload_size = 0;
-    
-    add_udp_payload(current->port, payload, &payload_size);
     
     udp->uh_sport = htons(generate_source_port());
     udp->uh_dport = htons(current->port);
-    udp->uh_ulen = htons(sizeof(struct udphdr) + payload_size);
+    udp->uh_ulen = htons(sizeof(struct udphdr));
     udp->uh_sum = 0;
-    
-    // Set IP header for UDP
     set_ip_header(ip, g_config.src_ip, &target, IPPROTO_UDP);
     ip->ip_p = IPPROTO_UDP;
-    ip->ip_len = htons(sizeof(struct ip) + sizeof(struct udphdr) + payload_size);
+    ip->ip_len = htons(sizeof(struct ip) + sizeof(struct udphdr));
     ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
-    
-    if (payload_size > 0) {
-        memcpy(datagram + sizeof(struct ip) + sizeof(struct udphdr), payload, payload_size);
+    current->tcp_udp = "udp";
+    pthread_mutex_lock(&g_config.socket_mutex);
+    if (sendto(data->sock, datagram, sizeof(struct ip) + sizeof(struct udphdr), 0,
+               (struct sockaddr *)&target, sizeof(target)) < 0) {
+        perror("sendto UDP");
+        fprintf(stderr, "Failed to send UDP packet to %s:%d\n", 
+                inet_ntoa(target.sin_addr), current->port);
     }
-    
-    PRINT_DEBUG("sending udp to : %d\n", current->port);
-    send_to(data->sock, datagram, sizeof(struct ip) + sizeof(struct udphdr) + payload_size, 0,
-           (struct sockaddr *)&target, sizeof(target));
+    pthread_mutex_unlock(&g_config.socket_mutex);
 }
 
 

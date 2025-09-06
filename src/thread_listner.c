@@ -107,10 +107,11 @@ void process_icmp_packet(struct ip *iph, const struct pcap_pkthdr *header)
                     snprintf(reason_buffer, sizeof(reason_buffer), "port-unreach ttl %d", ttl);
                     current->reason = strdup(reason_buffer);
                 }
+                PRINT_DEBUG("set to print \n");
                 current->to_print = true;
                 V_PRINT(1, "Discovered closed port %d/udp on %s (ICMP port unreachable)\n", 
                         current->port, g_config.ip);
-                break;
+                // break;
             }
             current = current->next;
         }
@@ -126,8 +127,14 @@ void process_packet(unsigned char *user, const struct pcap_pkthdr *header, const
 
     struct ether_header *ethh = (struct ether_header *)buffer;
     struct ip *iph = (struct ip *)(buffer + sizeof(struct ether_header));
+    struct tcphdr *tcph = NULL;
     
     unsigned short iplen;
+    iplen = iph->ip_hl * 4;
+    if (iplen < 20) {
+        return;
+    }
+    
     g_config.packets_received++;
     if (ntohs(ethh->ether_type) != ETHERTYPE_IP) {
         printf("Non-IP packet captured, skipping...\n");
@@ -138,72 +145,68 @@ void process_packet(unsigned char *user, const struct pcap_pkthdr *header, const
     if (g_config.scan_types.udp && iph->ip_p == IPPROTO_ICMP) {
         // Handle ICMP responses for UDP scans
         process_icmp_packet(iph, header);
-        return;
+        // return;
     }
-    else if (iph->ip_p != IPPROTO_TCP) {
-        printf("Non-TCP packet captured, skipping...\n");
-        return;
-    }
-    iplen = iph->ip_hl * 4;
-    if (iplen < 20) {
-        return;
-    }
-
     // if (iph->ip_p == IPPROTO_UDP) process_udp(iph, buffer);
-    // else if (iph->ip_p == IPPROTO_ICMP) process_icmp(iph, buffer);
     // if (iph->ip_p == IPPROTO_TCP) process_tcp(header, buffer, iplen);
-    tcph = (struct tcphdr *)(buffer + sizeof(struct ether_header) + iplen);
-    size_t tcplen = tcph->th_off * 4;
-    const unsigned char *tcpdata = buffer + sizeof(struct ether_header) + iplen + tcplen;
-    size_t data_len = header->caplen - (sizeof(struct ether_header) + iplen + tcplen);
+    // else if (iph->ip_p == IPPROTO_ICMP) process_icmp(iph, buffer);
+    else if (iph->ip_p == IPPROTO_TCP) {
+        tcph = (struct tcphdr *)(buffer + sizeof(struct ether_header) + iplen);
+        size_t tcplen = tcph->th_off * 4;
+        const unsigned char *tcpdata = buffer + sizeof(struct ether_header) + iplen + tcplen;
+        size_t data_len = header->caplen - (sizeof(struct ether_header) + iplen + tcplen);
 
-    // Extract TTL from IP header for reason detection
-    uint8_t ttl = iph->ip_ttl;
-    char reason_buffer[64];
+        // Extract TTL from IP header for reason detection
+        uint8_t ttl = iph->ip_ttl;
+        char reason_buffer[64];
 
-    pthread_mutex_lock(&g_config.port_mutex);
-    t_port *current = g_config.port_list;
-    while (current) {
+        pthread_mutex_lock(&g_config.port_mutex);
+        t_port *current = g_config.port_list;
+        while (current) {
 
-        // check header for service
-        if (ntohs(tcph->source) == current->port)
-        {
-            if (tcph->syn && tcph->ack){
-                current->state = STATE_OPEN;
-                if (g_config.reason) {
-                    snprintf(reason_buffer, sizeof(reason_buffer), "syn-ack ttl %d", ttl);
-                    current->reason = strdup(reason_buffer);
-                }
-                V_PRINT(1, "Discovered open port %d/tcp on %s\n", 
-                        current->port, g_config.ip);
-                current->to_print = true;
-                if (data_len > 0 && current->service == NULL) {
-                    current->service = extract_service_from_payload(tcpdata, data_len, current->port);
-                    if (current->service) {
-                        V_PRINT(2, "Service detection: port %d/tcp is %s\n", 
-                                current->port, current->service);
+            // check header for service
+            if (ntohs(tcph->source) == current->port)
+            {
+                if (tcph->syn && tcph->ack){
+                    current->state = STATE_OPEN;
+                    if (g_config.reason) {
+                        snprintf(reason_buffer, sizeof(reason_buffer), "syn-ack ttl %d", ttl);
+                        current->reason = strdup(reason_buffer);
+                    }
+                    V_PRINT(1, "Discovered open port %d/tcp on %s\n", 
+                            current->port, g_config.ip);
+                    PRINT_DEBUG();
+                    current->to_print = true;
+                    if (data_len > 0 && current->service == NULL) {
+                        current->service = extract_service_from_payload(tcpdata, data_len, current->port);
+                        if (current->service) {
+                            V_PRINT(2, "Service detection: port %d/tcp is %s\n", 
+                                    current->port, current->service);
+                        }
                     }
                 }
-            }
-            else if (tcph->rst){
-                current->state = STATE_CLOSED;
-                if (g_config.reason) {
-                    snprintf(reason_buffer, sizeof(reason_buffer), "reset ttl %d", ttl);
-                    current->reason = strdup(reason_buffer);
+                else if (tcph->rst){
+                    current->state = STATE_CLOSED;
+                    if (g_config.reason) {
+                        snprintf(reason_buffer, sizeof(reason_buffer), "reset ttl %d", ttl);
+                        current->reason = strdup(reason_buffer);
+                    }
+                    PRINT_DEBUG();
+                    current->to_print = true;
                 }
-                current->to_print = true;
-            }
-            else if (tcph->fin){
-                current->state = STATE_FILTERED;
-                if (g_config.reason) {
-                    current->reason = strdup("no-response");
+                else if (tcph->fin){
+                    current->state = STATE_FILTERED;
+                    if (g_config.reason) {
+                        current->reason = strdup("no-response");
+                    }
+                    PRINT_DEBUG();
+                    current->to_print = true;
                 }
-                current->to_print = true;
             }
+            current = current->next;
         }
-        current = current->next;
+        pthread_mutex_unlock(&g_config.port_mutex);
     }
-    pthread_mutex_unlock(&g_config.port_mutex);
 }
 
 void *start_listner()
