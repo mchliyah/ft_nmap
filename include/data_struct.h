@@ -16,10 +16,11 @@ typedef enum scan_type {
 // port states
 
 typedef enum port_state {
-    STATE_WAITING   = 1,
-    STATE_OPEN      = 2,
-    STATE_CLOSED    = 3,
-    STATE_FILTERED  = 4
+    STATE_WAITING       = 1,
+    STATE_OPEN          = 2,
+    STATE_CLOSED        = 3,
+    STATE_FILTERED      = 4,
+    STATE_OPEN_FILTRED  = 5
 } port_state ;
 
 

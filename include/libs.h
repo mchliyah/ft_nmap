@@ -24,6 +24,7 @@
 #include <netinet/udp.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include <netinet/ip_icmp.h>
 #ifdef __linux__
 #include <linux/if_packet.h>
 #endif

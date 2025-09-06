@@ -11,7 +11,6 @@ void print_help();
 void parse_ports();
 void parse_scan_types();
 void run_scan();
-void print_complete_scan();
 void print_scan_result();
 void parse_args(int argc, char **argv);
 void *scan_thread(void *arg);
@@ -25,7 +24,7 @@ void handle_single_ip_scan();
 void initialize_config();
 void cleanup_ports();
 void set_tcp_header(struct tcphdr *tcp, scan_type target_type);
-void set_ip_header(struct ip *ip, const char *src_ip, struct sockaddr_in *target);
+void set_ip_header(struct ip *ip, const char *src_ip, struct sockaddr_in *target, uint8_t protocol);
 
 void set_psudo_header(struct pseudo_header *psh, const char *src_ip, struct sockaddr_in *target);
 unsigned short csum(unsigned short *ptr, int nbytes);
