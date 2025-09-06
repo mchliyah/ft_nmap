@@ -83,6 +83,12 @@ re:
 	make fclean
 	make all
 
+build: 
+	docker build -t ft_nmap_image .
+run_docker:
+	docker run -it --rm --network=host --privileged ft_nmap_image
+
+
 # ===== Dependency Inclusion =====
 # Auto-generated .d files for header changes
 -include $(DEPS)
