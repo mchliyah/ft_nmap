@@ -152,7 +152,7 @@ void process_packet(unsigned char *user, const struct pcap_pkthdr *header, const
     // if (iph->ip_p == IPPROTO_UDP) process_udp(iph, buffer);
     // else if (iph->ip_p == IPPROTO_ICMP) process_icmp(iph, buffer);
     // if (iph->ip_p == IPPROTO_TCP) process_tcp(header, buffer, iplen);
-    tcph = (struct tcphdr *)(buffer + sizeof(struct ether_header) + iplen);
+    struct tcphdr *tcph = (struct tcphdr *)(buffer + sizeof(struct ether_header) + iplen);
     size_t tcplen = tcph->th_off * 4;
     const unsigned char *tcpdata = buffer + sizeof(struct ether_header) + iplen + tcplen;
     size_t data_len = header->caplen - (sizeof(struct ether_header) + iplen + tcplen);
