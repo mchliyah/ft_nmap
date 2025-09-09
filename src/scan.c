@@ -35,30 +35,33 @@ void start_thread_listner(pthread_t *global_listener) {
 }
 
 
-void start_sender_threads(int sock, pthread_t *threads, scan_thread_data *thread_data) {
+void start_sender_threads(int sock, pthread_t *threads, t_ips *current_ips, scan_thread_data *thread_data) {
 
     int ports_per_thread = g_config.port_count / g_config.speedup;
     int remaining_ports = g_config.port_count % g_config.speedup;
     int start_range = 0;
-    t_port *current = g_config.port_list;
+
+    t_port *current = current_ips->port_list;
+
 
     V_PRINT(1, "Initializing %s scan at %s\n", get_scan_type_name(), get_current_time_short());
-    V_PRINT(1, "Scanning %s [%d ports]\n", g_config.ip, g_config.port_count);
+    V_PRINT(1, "Scanning %s [%d ports]\n", current_ips->ip, g_config.port_count);
     for (int i = 0; i < g_config.speedup; i++) {
+        int end_range = start_range + ports_per_thread + (i < remaining_ports ? 1 : 0);
         thread_data[i] = (scan_thread_data){
             .sock = sock,
             .thread_id = i,
+            .ips = current_ips,
             .current = current,
             .start_range = start_range,
             .end_range = start_range + ports_per_thread + (i < remaining_ports ? 1 : 0)
         };
+        PRINT_DEBUG("start range : %d end range : %d remaining %d \n", start_range, end_range, remaining_ports);
         if (pthread_create(&threads[i], NULL, scan_thread, &thread_data[i]) != 0) {
             perror("pthread_create");
             exit(EXIT_FAILURE);
         }
-        // thread_created++;
         start_range = thread_data[i].end_range;
-        // Move current pointer to the start of the next thread's range
         while (current && current->port < start_range) {
             current = current->next;
         }
@@ -104,7 +107,7 @@ void timeout_scan_result( pthread_t global_listener) {
 
 int set_socket(){
 
-    int sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
+    int sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
     if (sock < 0) {
         perror("socket");
         exit(EXIT_FAILURE);
@@ -124,27 +127,25 @@ void run_scan() {
     
     int sock = set_socket();
     pthread_t global_listener;
-    for (int ip_index = 0; ip_index < g_config.ip_count; ip_index++) {
-        g_config.ip = g_config.ip_list[ip_index];
-        V_PRINT(1, "Scanning %s\n", g_config.ip);
+    t_ips *current_ips = g_config.ips;
+    while(current_ips) {
+        V_PRINT(1, "Scanning %s\n", current_ips->ip);
         
         pthread_t threads[g_config.speedup];
         scan_thread_data thread_data[g_config.speedup];
 
         start_thread_listner(&global_listener);
         usleep(100000);
-        start_sender_threads(sock, threads, thread_data);
+        start_sender_threads(sock, threads, current_ips, thread_data);
 
         for (int i = 0; i < g_config.speedup; i++) {
             pthread_join(threads[i], NULL);
         }
         
         V_PRINT(1, "Completed %s Scan for %s at %s, %.2fs elapsed (%d total ports)\n",
-        get_scan_type_name(), g_config.ip, ctime(&g_config.scan_start_time), 
+        get_scan_type_name(), current_ips->ip, ctime(&g_config.scan_start_time), 
         difftime(time(NULL), g_config.scan_start_time), g_config.port_count);
-        if (ip_index < g_config.ip_count - 1) {
-            printf("\n");
-        }
+        current_ips = current_ips->next;
     }
     timeout_scan_result(global_listener);
     close(sock);

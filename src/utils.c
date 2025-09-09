@@ -1,6 +1,5 @@
 #include "../include/ft_nmap.h"
 
-// Function to resolve hostname to IP address
 char* resolve_hostname(const char* hostname) {
     struct addrinfo hints, *result;
     char* ip_str = NULL;
@@ -29,16 +28,13 @@ char* resolve_hostname(const char* hostname) {
     return ip_str;
 }
 
-// Function to check if a string is a valid IP address
 int is_valid_ip(const char* str) {
     struct sockaddr_in sa;
     return inet_pton(AF_INET, str, &(sa.sin_addr)) == 1;
 }
 
-// Function to process IP or hostname and return IP address
 char* process_target(const char* target) {
     if (is_valid_ip(target)) {
-        // It's already an IP address, return a copy
         char* ip_copy = malloc(strlen(target) + 1);
         if (ip_copy) {
             strcpy(ip_copy, target);
@@ -64,14 +60,11 @@ const char* get_interface_ip(const char *target_ip) {
         if (!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_INET)
             continue;
         
-        // Skip loopback
         if (strcmp(ifa->ifa_name, "lo") == 0)
             continue;
 
         struct sockaddr_in *addr = (struct sockaddr_in *)ifa->ifa_addr;
         struct sockaddr_in *mask = (struct sockaddr_in *)ifa->ifa_netmask;
-
-        // Check if target is in same subnet
         if (mask && (addr->sin_addr.s_addr & mask->sin_addr.s_addr) == 
             (target & mask->sin_addr.s_addr)) {
             inet_ntop(AF_INET, &addr->sin_addr, ip_str, INET_ADDRSTRLEN);
@@ -107,7 +100,6 @@ const char* find_interface_for_target(const char *target_ip) {
         return strdup("eth0");
     }
 
-    // Check if target is localhost (127.0.0.1 or 127.x.x.x)
     if ((target & 0xFF) == 127) {
         freeifaddrs(ifaddr);
         return strdup("lo");
@@ -117,7 +109,6 @@ const char* find_interface_for_target(const char *target_ip) {
         if (!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_INET)
             continue;
 
-        // Skip loopback for non-localhost targets
         if (strcmp(ifa->ifa_name, "lo") == 0)
             continue;
 
@@ -131,7 +122,6 @@ const char* find_interface_for_target(const char *target_ip) {
         }
     }
 
-    // Fallback to first non-loopback interface
     if (!best_iface) {
         for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
             if (!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_INET)
@@ -238,34 +228,37 @@ char *extract_udp_service_from_payload(const unsigned char *payload, size_t payl
 
 
 void add_port(int port, int state) {
-    t_port *new_port = malloc(sizeof(t_port));
-    if (!new_port) {
-        perror("Failed to allocate memory for new port");
-        exit(EXIT_FAILURE);
-    }
-    new_port->port = port;
-    new_port->state = state;
-    new_port->to_print = false;
-    new_port->tcp_udp = "tcp";
-    new_port->service = get_service_by_port(port);
-    new_port->reason = NULL;
-    new_port->next = NULL;
-
-    pthread_mutex_lock(&g_config.port_mutex);
-    if (!g_config.port_list) {
-        g_config.port_list = new_port;
-    } else {
-        t_port *current = g_config.port_list;
-        while (current->next) {
-            current = current->next;
+    t_ips *current_ip = g_config.ips;
+    while (current_ip)
+    {
+        t_port *new_port = malloc(sizeof(t_port));
+        if (!new_port) {
+            perror("Failed to allocate memory for new port");
+            exit(EXIT_FAILURE);
         }
-        current->next = new_port;
-    }
-    g_config.port_count++;
-    pthread_mutex_unlock(&g_config.port_mutex);
-}
+        new_port->port = port;
+        new_port->state = state;
+        new_port->to_print = false;
+        new_port->tcp_udp = "tcp";
+        new_port->service = get_service_by_port(port);
+        new_port->reason = NULL;
+        new_port->next = NULL;
 
-// Function to read IPs from file
+        pthread_mutex_lock(&g_config.port_mutex);
+        if (!g_config.ips->port_list) {
+            g_config.ips->port_list = new_port;
+        } else {
+            t_port *current = g_config.ips->port_list;
+            while (current->next) {
+                current = current->next;
+            }
+            current->next = new_port;
+        }
+        g_config.port_count++;
+        pthread_mutex_unlock(&g_config.port_mutex);
+        current_ip = current_ip->next;
+    }
+}
 char** read_ips_from_file(const char* filename, int* count) {
     FILE *file = fopen(filename, "r");
     if (!file) {
@@ -277,12 +270,9 @@ char** read_ips_from_file(const char* filename, int* count) {
     char line[256];
     *count = 0;
     
-    // First pass: count lines
     while (fgets(line, sizeof(line), file)) {
-        // Remove trailing newline and whitespace
         line[strcspn(line, "\r\n")] = 0;
         
-        // Skip empty lines and comments
         if (strlen(line) == 0 || line[0] == '#') {
             continue;
         }
@@ -295,8 +285,6 @@ char** read_ips_from_file(const char* filename, int* count) {
         fclose(file);
         return NULL;
     }
-    
-    // Allocate memory for IP array
     ips = malloc(*count * sizeof(char*));
     if (!ips) {
         fprintf(stderr, "Error: Failed to allocate memory for IP addresses\n");
@@ -304,26 +292,19 @@ char** read_ips_from_file(const char* filename, int* count) {
         return NULL;
     }
     
-    // Second pass: read IPs
     rewind(file);
     int index = 0;
     while (fgets(line, sizeof(line), file) && index < *count) {
-        // Remove trailing newline and whitespace
         line[strcspn(line, "\r\n")] = 0;
         
-        // Skip empty lines and comments
         if (strlen(line) == 0 || line[0] == '#') {
             continue;
         }
-        
-        // Try to resolve hostname/IP
         char* resolved_ip = process_target(line);
         if (!resolved_ip) {
             fprintf(stderr, "Warning: Failed to resolve target '%s', skipping\n", line);
             continue;
         }
-        
-        // Allocate and store resolved IP
         ips[index] = resolved_ip;
         index++;
     }
@@ -341,7 +322,6 @@ char** read_ips_from_file(const char* filename, int* count) {
     return ips;
 }
 
-// Function to free IP array
 void free_ip_array(char** ips, int count) {
     if (!ips) return;
     
@@ -373,7 +353,6 @@ const char* get_scan_type_name() {
 }
 
 const char* get_reverse_dns(const char *ip) {
-    // Simplified implementation - replace with actual rDNS lookup
     struct in_addr addr;
     if (inet_pton(AF_INET, ip, &addr) != 1) {
         return "invalid-ip";
@@ -387,7 +366,7 @@ const char* get_reverse_dns(const char *ip) {
     return "unknown";
 }
 
-void print_scan_statistics() {
+void print_verbose_statistics(void) {
     int open_ports = 0, filtered_ports = 0, closed_ports = 0;
     t_port *current = g_config.port_list;
     
@@ -397,11 +376,7 @@ void print_scan_statistics() {
         else if (current->state == STATE_CLOSED) closed_ports++;
         current = current->next;
     }
-    
-    V_PRINT(1, "Not shown: %d filtered %s\n", filtered_ports, 
-           filtered_ports == 1 ? "port" : "ports");
 
-    if (g_config.verbose) {
-        printf("Raw packets sent: %d | Rcvd: %d\n", g_config.packets_sent, g_config.packets_received);
-    }
+    V_PRINT(1, "Not shown: %d filtered %s\n", filtered_ports, filtered_ports == 1 ? "port" : "ports");
+    V_PRINT(1, "Raw packets sent: %d | Rcvd: %d\n", g_config.packets_sent, g_config.packets_received);
 }

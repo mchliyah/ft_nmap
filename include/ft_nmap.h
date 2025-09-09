@@ -30,7 +30,7 @@ void *start_listner();
 uint16_t generate_source_port();
 void add_port(int port, int state);
 const char *port_state_to_string(int state);
-void print_debug(void);
+void print_verbose_statistics(void);
 char** read_ips_from_file(const char* filename, int* count);
 void free_ip_array(char** ips, int count);
 
@@ -50,4 +50,6 @@ const char* get_scan_type_name();
 const char* get_current_time();
 double get_elapsed_time();
 const char* get_reverse_dns(const char *ip);
+const udp_payload_t *get_udp_payload(uint16_t port);
+void free_ip_list(t_ips *ip_list);
 #endif

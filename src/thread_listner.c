@@ -12,13 +12,9 @@ void process_udp_response(const u_char *packet, int packet_len) {
     struct udphdr *udp_header = (struct udphdr *)(packet + sizeof(struct ether_header) + iplen);
     
     uint16_t src_port = ntohs(udp_header->uh_sport);
-    // uint16_t dst_port = ntohs(udp_header->uh_dport);
     
     char response_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(iph->ip_src), response_ip, INET_ADDRSTRLEN);
-    
-    // printf("erspense ip : %s and port %u\n", response_ip, src_port);
-    // printf("g_config ip : %s and port %u \n", g_config.ip, dst_port);
     
     if (strcmp(response_ip, g_config.ip) != 0) {
         return;
@@ -28,7 +24,6 @@ void process_udp_response(const u_char *packet, int packet_len) {
     t_port *current = g_config.port_list;
     V_PRINT(1, "going to check udp packet");
     while (current) {
-        printf("curent port : %d and src poer %d and curent tcp udp %s \n", current->port, src_port, current->tcp_udp);
         if (current->port == src_port && strcmp(current->tcp_udp, "udp") == 0) {
             current->state = STATE_OPEN;
             current->to_print = true;
@@ -85,44 +80,52 @@ void process_tcp_packet(const struct pcap_pkthdr *header, const unsigned char *b
     char reason_buffer[64];
 
     pthread_mutex_lock(&g_config.port_mutex);
-    t_port *current = g_config.port_list;
-    while (current) {
-        if (ntohs(tcph->source) == current->port && strcmp(current->tcp_udp, "tcp") == 0)
-        {
-            if (tcph->syn && tcph->ack){
-                current->state = STATE_OPEN;
-                if (g_config.reason) {
-                    snprintf(reason_buffer, sizeof(reason_buffer), "syn-ack ttl %d", ttl);
-                    current->reason = strdup(reason_buffer);
-                }
-                V_PRINT(1, "Discovered open port %d/tcp on %s\n", 
-                        current->port, g_config.ip);
-                current->to_print = true;
-                if (data_len > 0 && current->service == NULL) {
-                    current->service = extract_service_from_payload(tcpdata, data_len, current->port);
-                    if (current->service) {
-                        V_PRINT(2, "Service detection: port %d/tcp is %s\n", 
-                                current->port, current->service);
+    char src_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(iph->ip_src), src_ip, INET_ADDRSTRLEN);
+
+    t_ips *current_ip = g_config.ips;
+    while (current_ip){
+        if (strcmp(src_ip, current_ip->ip) == 0) {
+            t_port *current = current_ip->port_list;
+            while (current) {
+                if (ntohs(tcph->source) == current->port && strcmp(current->tcp_udp, "tcp") == 0) {
+                    if (tcph->syn && tcph->ack){
+                        current->state = STATE_OPEN;
+                        if (g_config.reason) {
+                            snprintf(reason_buffer, sizeof(reason_buffer), "syn-ack ttl %d", ttl);
+                            current->reason = strdup(reason_buffer);
+                        }
+                        V_PRINT(1, "Discovered open port %d/tcp on %s\n", 
+                        current->port, current_ip->ip);
+                        current->to_print = true;
+                        if (data_len > 0 && current->service == NULL) {
+                            current->service = extract_service_from_payload(tcpdata, data_len, current->port);
+                            if (current->service) {
+                                V_PRINT(2, "Service detection: port %d/tcp is %s\n", 
+                                        current->port, current->service);
+                            }
+                        }
+                    }
+                    else if (tcph->rst){
+                        current->state = STATE_CLOSED;
+                        if (g_config.reason) {
+                            snprintf(reason_buffer, sizeof(reason_buffer), "reset ttl %d", ttl);
+                            current->reason = strdup(reason_buffer);
+                        }
+                        current->to_print = true;
+                    }
+                    else if (tcph->fin){
+                        current->state = STATE_FILTERED;
+                        if (g_config.reason) {
+                            current->reason = strdup("no-response");
+                        }
+                        current->to_print = true;
                     }
                 }
-            }
-            else if (tcph->rst){
-                current->state = STATE_CLOSED;
-                if (g_config.reason) {
-                    snprintf(reason_buffer, sizeof(reason_buffer), "reset ttl %d", ttl);
-                    current->reason = strdup(reason_buffer);
-                }
-                current->to_print = true;
-            }
-            else if (tcph->fin){
-                current->state = STATE_FILTERED;
-                if (g_config.reason) {
-                    current->reason = strdup("no-response");
-                }
-                current->to_print = true;
+                current = current->next;
             }
         }
-        current = current->next;
+        current_ip = current_ip->next;
     }
     pthread_mutex_unlock(&g_config.port_mutex);
 }
@@ -139,64 +142,24 @@ void process_packet(unsigned char *user, const struct pcap_pkthdr *header, const
     if (ntohs(ethh->ether_type) != ETHERTYPE_IP) return;
     
     iplen = iph->ip_hl * 4;
-    V_PRINT(1, "packet recived %u  ", iplen);
+    // V_PRINT(1, "packet recived %u  ", iplen);
     if (iplen < 20) return;
     
-    if (iph->ip_p == IPPROTO_ICMP) {
-        //debug vars and print
-        // struct icmp *icmp_hdr = (struct icmp *)(buffer + (iph->ip_hl * 4));
-        // char src_ip[INET_ADDRSTRLEN];
-        // char dst_ip[INET_ADDRSTRLEN];
-        
-        // strcpy(src_ip, inet_ntoa(iph->ip_src));
-        // strcpy(dst_ip, inet_ntoa(iph->ip_dst));
-        
-        // PRINT_DEBUG("ICMP: %s -> %s, Type: %d, Code: %d\n", 
-        //        src_ip, dst_ip,
-        //        icmp_hdr->icmp_type, icmp_hdr->icmp_code);
-        process_icmp_response(buffer, header->caplen);
-    }
-    else if (iph->ip_p == IPPROTO_UDP && g_config.scan_types.udp) {
-        //debug vars and print
-        // struct udphdr *udp_hdr = (struct udphdr *)(buffer + (iph->ip_hl * 4));
-        // char src_ip[INET_ADDRSTRLEN];
-        // char dst_ip[INET_ADDRSTRLEN];
-        
-        // strcpy(src_ip, inet_ntoa(iph->ip_src));
-        // strcpy(dst_ip, inet_ntoa(iph->ip_dst));
-        
-        // PRINT_DEBUG("UDP: %s:%d -> %s:%d, Length: %d\n", 
-        //        src_ip, ntohs(udp_hdr->uh_sport),
-        //        dst_ip, ntohs(udp_hdr->uh_dport),
-        //        ntohs(udp_hdr->uh_ulen));
-        process_udp_response(buffer, header->caplen);
-    } 
-    else if (iph->ip_p == IPPROTO_TCP) { 
-        //debug vars and print
-        // struct tcphdr *tcp_hdr = (struct tcphdr *)(buffer + (iph->ip_hl * 4));
-        // char src_ip[INET_ADDRSTRLEN];
-        // char dst_ip[INET_ADDRSTRLEN];
-        
-        // strcpy(src_ip, inet_ntoa(iph->ip_src));
-        // strcpy(dst_ip, inet_ntoa(iph->ip_dst));
-        
-        // PRINT_DEBUG("TCP: %s:%d -> %s:%d\n", 
-        //        src_ip, ntohs(tcp_hdr->th_sport),
-        //        dst_ip, ntohs(tcp_hdr->th_dport));
-        process_tcp_packet(header, buffer, iplen, iph);
-    }
+    if (iph->ip_p == IPPROTO_ICMP) process_icmp_response(buffer, header->caplen);
+    else if (iph->ip_p == IPPROTO_UDP && g_config.scan_types.udp) process_udp_response(buffer, header->caplen);
+    else if (iph->ip_p == IPPROTO_TCP) process_tcp_packet(header, buffer, iplen, iph);
 }
 
-void *start_listner()
-{
-    char errbuf[PCAP_ERRBUF_SIZE];
-    pcap_t *handle;
+pcap_t *set_pcap(void){
+
     bpf_u_int32 netmask;
     bpf_u_int32 mask;
-    char filter_exp[100];
     struct bpf_program fp;
-
+    char errbuf[PCAP_ERRBUF_SIZE];
+    char filter_exp[100];
+    pcap_t *handle;
     const char *interface = find_interface_for_target(g_config.ip);
+    
     if (!interface) {
         fprintf(stderr, "No valid interface found for target IP %s\n", g_config.ip);
         return NULL;
@@ -214,9 +177,9 @@ void *start_listner()
     }
 
     if (g_config.scan_types.udp) {
-        snprintf(filter_exp, 100, "icmp or udp and host %s", g_config.ip);
+        snprintf(filter_exp, 100, "icmp or udp and host");
     } else {
-        snprintf(filter_exp, 100, "tcp and host %s", g_config.ip);
+        snprintf(filter_exp, 100, "tcp");
     }
     
     if (pcap_compile(handle, &fp, filter_exp, 0, netmask) == -1) {
@@ -233,8 +196,15 @@ void *start_listner()
 
     V_PRINT(1, "Starting listener on interface %s\n", interface);
     V_PRINT(2, "Using filter: %s\n", filter_exp);
+
+    return handle;
+}
+
+void *start_listner() {
+    pcap_t *handle = set_pcap();
     int timeout_count = 0;
-    while (1) {
+
+    while (!g_config.scan_complete) {
         int pd = pcap_dispatch(handle, -1, &process_packet, NULL);
         if (pd == 0)
         {
@@ -243,6 +213,7 @@ void *start_listner()
             if (timeout_count >= g_config.timeout)
             {
                 V_PRINT(1, "No packets received for a while, listener exiting...\n");
+                g_config.scan_complete = true;
                 break;
             }
         }

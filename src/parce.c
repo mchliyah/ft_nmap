@@ -12,80 +12,142 @@ static const t_option long_options[] = {
     {NULL, 0, NULL, 0}
 };
 
-static int add_ip_to_list(char ***ip_list, int *count, char *ip) {
-    char **new_list = realloc(*ip_list, (*count + 1) * sizeof(char*));
-    if (!new_list) {
-        perror("realloc");
-        return 0;
+static t_ips *create_ip_node(const char *ip, const char *hostname) {
+    t_ips *new_node = malloc(sizeof(t_ips));
+    if (!new_node) {
+        perror("malloc");
+        return NULL;
     }
     
-    new_list[*count] = strdup(ip);
-    if (!new_list[*count]) {
+    new_node->ip = strdup(ip);
+    if (!new_node->ip) {
         perror("strdup");
-        return 0;
+        free(new_node);
+        return NULL;
     }
     
-    *ip_list = new_list;
+    new_node->resolve_hostname = hostname ? strdup(hostname) : NULL;
+    if (hostname && !new_node->resolve_hostname) {
+        perror("strdup");
+        free(new_node->ip);
+        free(new_node);
+        return NULL;
+    }
+    
+    new_node->port_list = NULL;
+    new_node->next = NULL;
+    
+    return new_node;
+}
+
+static int add_ip_to_list(t_ips **ip_list, int *count, const char *ip, const char *hostname) {
+    t_ips *new_node = create_ip_node(ip, hostname);
+    new_node->next = NULL;
+    if (!new_node) {
+        return 0;
+    }
+
+    *ip_list = new_node;
     (*count)++;
+    
     return 1;
 }
 
 void parse_args(int argc, char **argv) {
     if (argc < 2) {
         print_help();
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     
     int opt;
-    char **ip_list = NULL;
+    t_ips *ip_list = NULL;
     int ip_count = 0;
     
     while ((opt = getopt_long(argc, argv, "hi:p:f:s:S:vr", 
            (struct option *)long_options, NULL)) != -1) {
         switch (opt) {
-            case 'h': print_help(); exit(0);
+            case 'h': 
+                print_help(); 
+                exit(0);
+                
             case 'i': {
                 char* resolved_ip = process_target(optarg);
                 if (!resolved_ip) {
                     fprintf(stderr, "Error: Failed to resolve target '%s'\n", optarg);
-                    exit(1);
+                    free_ip_list(ip_list);
+                    exit(EXIT_FAILURE);
                 }
-                if (!add_ip_to_list(&ip_list, &ip_count, resolved_ip)) {
+                const char *hostname = (strcmp(optarg, resolved_ip) != 0) ? optarg : NULL;
+                
+                if (!add_ip_to_list(&ip_list, &ip_count, resolved_ip, hostname)) {
                     free(resolved_ip);
-                    exit(1);
+                    free_ip_list(ip_list);
+                    exit(EXIT_FAILURE);
                 }
                 free(resolved_ip);
                 break;
             }
+            
             case 'v': 
-                printf("Increasing verbosity level to %d\n", g_config.verbose + 1);
-                g_config.verbose++; 
+                g_config.verbose++;
+                g_config.reason = 1;
+                printf("Increasing verbosity level to %d\n", g_config.verbose);
                 break;
-            case 'r': g_config.reason = 1; break;
-            case 'p': g_config.ports = optarg; break;
+                
+            case 'r': 
+                g_config.reason = 1; 
+                break;
+                
+            case 'p': 
+                g_config.ports = optarg; 
+                break;
+                        
+            case 's': 
+                g_config.scans = optarg; 
+                break;
+                
+            case 'S': 
+                g_config.speedup = atoi(optarg); 
+                break;
+
             case 'f': {
                 int file_ip_count = 0;
                 char **file_ips = read_ips_from_file(optarg, &file_ip_count);
                 if (!file_ips) {
-                    exit(1);
+                    free_ip_list(ip_list);
+                    exit(EXIT_FAILURE);
                 }
+                
                 for (int i = 0; i < file_ip_count; i++) {
-                    if (!add_ip_to_list(&ip_list, &ip_count, file_ips[i])) {
-                        // Clean up on error
-                        for (int j = 0; j < file_ip_count; j++) free(file_ips[j]);
-                        free(file_ips);
-                        for (int j = 0; j < ip_count; j++) free(ip_list[j]);
-                        free(ip_list);
-                        exit(1);
+                    char* resolved_ip = process_target(file_ips[i]);
+                    if (!resolved_ip) {
+                        fprintf(stderr, "Error: Failed to resolve target '%s'\n", file_ips[i]);
+                        for (int j = i; j < file_ip_count; j++) free(file_ips[j]);
+                        free_ip_array(file_ips, file_ip_count);
+                        free_ip_list(ip_list);
+                        exit(EXIT_FAILURE);
                     }
+                    
+                    const char *hostname = (strcmp(file_ips[i], resolved_ip) != 0) ? file_ips[i] : NULL;
+                    
+                    if (!add_ip_to_list(&ip_list, &ip_count, resolved_ip, hostname)) {
+                        free(resolved_ip);
+                        for (int j = i; j < file_ip_count; j++) free(file_ips[j]);
+                        free_ip_array(file_ips, file_ip_count);
+                        free_ip_list(ip_list);
+                        exit(EXIT_FAILURE);
+                    }
+                    
+                    free(resolved_ip);
                     free(file_ips[i]);
                 }
-                free(file_ips);
+                free_ip_array(file_ips, file_ip_count);
                 break;
             }
-            case 's': g_config.scans = optarg; break;
-            case 'S': g_config.speedup = atoi(optarg); break;
-            default: print_help(); exit(1);
+            default: 
+                print_help(); 
+                free_ip_list(ip_list);
+                exit(EXIT_FAILURE);
         }
     }
 
@@ -93,32 +155,32 @@ void parse_args(int argc, char **argv) {
         char* resolved_ip = process_target(argv[optind]);
         if (!resolved_ip) {
             fprintf(stderr, "Error: Failed to resolve target '%s'\n", argv[optind]);
-            for (int i = 0; i < ip_count; i++) free(ip_list[i]);
-            free(ip_list);
-            exit(1);
+            free_ip_list(ip_list);
+            exit(EXIT_FAILURE);
         }
-        if (!add_ip_to_list(&ip_list, &ip_count, resolved_ip)) {
+        
+        const char *hostname = (strcmp(argv[optind], resolved_ip) != 0) ? argv[optind] : NULL;
+        
+        if (!add_ip_to_list(&ip_list, &ip_count, resolved_ip, hostname)) {
             free(resolved_ip);
-            for (int i = 0; i < ip_count; i++) free(ip_list[i]);
-            free(ip_list);
-            exit(1);
+            free_ip_list(ip_list);
+            exit(EXIT_FAILURE);
         }
+        
         free(resolved_ip);
         optind++;
     }
 
     if (ip_count == 0 && !g_config.file) {
         fprintf(stderr, "Specify --ip or --file\n");
-        exit(1);
+        free_ip_list(ip_list);
+        exit(EXIT_FAILURE);
     }
-
-    g_config.ip_list = ip_list;
+    g_config.ips = ip_list;
     g_config.ip_count = ip_count;
-    
-    if (ip_count > 0) {
-        g_config.ip = ip_list[0];
-    }
+    g_config.ip = ip_list->ip;
 }
+
 
 void add_port_scantype(int p){
     g_config.scan_types.udp && SCAN_UDP ? add_port(p, STATE_OPEN_FILTERED): NULL;
@@ -128,6 +190,7 @@ void add_port_scantype(int p){
     g_config.scan_types.xmas && SCAN_XMAS ? add_port(p, STATE_OPEN): NULL;
     g_config.scan_types.ack && SCAN_ACK ? add_port(p, STATE_FILTERED): NULL;
     !g_config.scan_type_count? add_port(p, STATE_FILTERED) : NULL;
+
 }
 void parse_ports() {
     if (!g_config.ports) {
