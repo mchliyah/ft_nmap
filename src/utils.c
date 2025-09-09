@@ -148,6 +148,95 @@ const char* find_interface_for_target(const char *target_ip) {
     return best_iface ? best_iface : strdup("eth0");
 }
 
+
+char *extract_udp_service_from_payload(const unsigned char *payload, size_t payload_len, uint16_t port) {
+    if (!payload || payload_len == 0) {
+        return NULL;
+    }
+
+    if (port == 53 && payload_len >= 12) {
+        if (payload[2] & 0x80) {
+            return strdup("dns");
+        }
+    }
+
+    else if ((port == 67 || port == 68) && payload_len >= 240) {
+        if (payload_len > 240 && 
+            payload[236] == 0x63 && payload[237] == 0x82 && 
+            payload[238] == 0x53 && payload[239] == 0x63) {
+            return strdup("dhcp");
+        }
+    }
+
+    else if (port == 161 && payload_len >= 2) {
+        if (payload[0] == 0x30) {
+            return strdup("snmp");
+        }
+    }
+
+    else if (port == 123 && payload_len >= 48) {
+        uint8_t version = (payload[0] >> 3) & 0x07;
+        uint8_t mode = payload[0] & 0x07;
+        if (version >= 1 && version <= 4 && mode >= 1 && mode <= 5) {
+            return strdup("ntp");
+        }
+    }
+
+    else if (port == 137 && payload_len >= 12) {
+        if (payload[2] & 0x80) {
+            return strdup("netbios-ns");
+        }
+    }
+    else if (port == 69 && payload_len >= 4) {
+        uint16_t opcode = (payload[0] << 8) | payload[1];
+        if (opcode >= 1 && opcode <= 5) {
+            return strdup("tftp");
+        }
+    }
+
+    else if (port == 111 && payload_len >= 28) {
+        uint32_t msg_type = (payload[4] << 24) | (payload[5] << 16) | (payload[6] << 8) | payload[7];
+        uint32_t rpc_version = (payload[8] << 24) | (payload[9] << 16) | (payload[10] << 8) | payload[11];
+        if (msg_type == 1 && rpc_version == 2) {
+            return strdup("rpcbind");
+        }
+    }
+
+    else if (port == 1434 && payload_len > 0) {
+        if (payload[0] == 0x05) {
+            return strdup("ms-sql-m");
+        }
+    }
+    else if ((port == 1812 || port == 1813) && payload_len >= 20) {
+        uint8_t code = payload[0];
+        if (code >= 1 && code <= 13) {
+            return strdup("radius");
+        }
+    }
+    
+    else if (port == 5060 && payload_len > 8) {
+        if (strncmp((char*)payload, "SIP/2.0", 7) == 0) {
+            return strdup("sip");
+        }
+    }
+
+    else {
+        if (payload_len > 4 && strncmp((char*)payload, "HTTP", 4) == 0) {
+            return strdup("http");
+        }
+        if (payload_len > 3 && isdigit(payload[0]) && isdigit(payload[1]) && isdigit(payload[2])) {
+            return strdup("ftp");
+        }
+        
+        if (payload_len > 4 && strncmp((char*)payload, "SSH-", 4) == 0) {
+            return strdup("ssh");
+        }
+    }
+
+    return NULL;
+}
+
+
 void add_port(int port, int state) {
     t_port *new_port = malloc(sizeof(t_port));
     if (!new_port) {

@@ -121,7 +121,7 @@ void parse_args(int argc, char **argv) {
 }
 
 void add_port_scantype(int p){
-    g_config.scan_types.udp && SCAN_UDP ? add_port(p, SCAN_UDP): NULL;
+    g_config.scan_types.udp && SCAN_UDP ? add_port(p, STATE_OPEN_FILTERED): NULL;
     g_config.scan_types.syn && SCAN_SYN ? add_port(p, STATE_FILTERED): NULL;
     g_config.scan_types.null && SCAN_NULL ? add_port(p, STATE_OPEN): NULL;
     g_config.scan_types.fin && SCAN_FIN ? add_port(p, STATE_OPEN): NULL;
@@ -130,16 +130,13 @@ void add_port_scantype(int p){
     !g_config.scan_type_count? add_port(p, STATE_FILTERED) : NULL;
 }
 void parse_ports() {
-    // if (!g_config.ports && (!g_config.scan_type_count || g_config.scan_types.syn == SCAN_SYN))
-    if (!g_config.ports) { // i do not remember why i set the previes conditions 
+    if (!g_config.ports) {
         V_PRINT(1, "No ports specified, defaulting to 1-1024\n");
         g_config.ports = DEFAULT_PORTS;
-        // g_config.scan_types.syn = SCAN_SYN;
+        g_config.is_port_default = true;
         g_config.scan_type_count = 1;
     }
 
-    // Parse the ports string
-    PRINT_DEBUG("udp scan : %d\n", g_config.scan_types.udp);
     char *token = strtok(g_config.ports, ",");
     while (token) {
         char *dash = strchr(token, '-');
@@ -176,7 +173,6 @@ void set_scan_type(t_port *port, scan_type scan_type)
     }
 
 }
-// Parse scan types like "SYN,NULL,FIN" or "S,N,F"
 void parse_scan_types() {
     if (!g_config.scans)
     {
@@ -188,7 +184,6 @@ void parse_scan_types() {
     char *token = strtok(g_config.scans, ",");
     while (token)
     {
-        // Support both single letters and full names
         if      (strcmp(token, "S") == 0 || strcmp(token, "SYN") == 0) g_config.scan_types.syn = SCAN_SYN;
         else if (strcmp(token, "N") == 0 || strcmp(token, "NULL") == 0) g_config.scan_types.null = SCAN_NULL;
         else if (strcmp(token, "F") == 0 || strcmp(token, "FIN") == 0) g_config.scan_types.fin = SCAN_FIN;

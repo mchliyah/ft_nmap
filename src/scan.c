@@ -121,9 +121,6 @@ int set_socket(){
 }
 
 void run_scan() {
-    if (g_config.ip_list[0]){
-        g_config.src_ip = get_interface_ip(g_config.ip_list[0]);
-    }
     
     int sock = set_socket();
     pthread_t global_listener;

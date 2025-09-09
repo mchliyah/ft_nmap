@@ -57,6 +57,7 @@ typedef enum port_state {
     .ports               =  NULL, \
     .scans               =  NULL, \
     .port_list           =  NULL, \
+    .is_port_default     = false,  \
     .verbose             =  0,    \
     .reason              =  0,    \
     .ip_count            =  0,    \
@@ -116,6 +117,7 @@ typedef struct {
     int ip_count;
     char *file;
     char *ports;
+    bool is_port_default;
     char *scans;
     int verbose;
     int reason;
@@ -162,3 +164,10 @@ struct pseudo_header {
     unsigned short tcp_length;
     struct tcphdr tcp;
 };
+
+typedef struct {
+    uint16_t port;
+    const char *service;
+    const uint8_t *payload;
+    size_t payload_len;
+} udp_payload_t;

@@ -101,24 +101,133 @@ uint16_t calculate_checksum(uint16_t *buf, int len) {
     
     return (uint16_t)(~sum);
 }
+
+// Common UDP payloads
 const uint8_t dns_query[] = {
-    0x12, 0x34,
-    0x01, 0x00,
-    0x00, 0x01,
-    0x00, 0x00,
-    0x00, 0x00,
-    0x00, 0x00,
-    0x03, 'w', 'w', 'w',
-    0x06, 'g','o','o','g','l','e',
-    0x03, 'c','o','m',
-    0x00,
-    0x00, 0x01,
+    0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x03, 'w', 'w', 'w',
+    0x06, 'g', 'o', 'o', 'g', 'l', 'e', 0x03, 'c', 'o', 'm',
+    0x00, 0x00, 0x01, 0x00, 0x01
+};
+
+const uint8_t snmp_query[] = {
+    0x30, 0x26, 0x02, 0x01, 0x00, 0x04, 0x06, 0x70,
+    0x75, 0x62, 0x6c, 0x69, 0x63, 0xA0, 0x19, 0x02,
+    0x01, 0x01, 0x02, 0x01, 0x00, 0x02, 0x01, 0x00,
+    0x30, 0x0E, 0x30, 0x0C, 0x06, 0x08, 0x2B, 0x06,
+    0x01, 0x02, 0x01, 0x01, 0x01, 0x00, 0x05, 0x00
+};
+
+const uint8_t ntp_query[] = {
+    0xE3, 0x00, 0x04, 0xFA, 0x00, 0x01, 0x00, 0x00,
+    0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+const uint8_t netbios_query[] = {
+    0x80, 0x94, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x20, 0x43, 0x4B, 0x41,
+    0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41,
+    0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41,
+    0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41,
+    0x41, 0x41, 0x41, 0x41, 0x41, 0x00, 0x00, 0x21,
     0x00, 0x01
 };
 
+const uint8_t sip_options[] = {
+    'O', 'P', 'T', 'I', 'O', 'N', 'S', ' ',
+    's', 'i', 'p', ':', 'e', 'x', 'a', 'm',
+    'p', 'l', 'e', '@', 'e', 'x', 'a', 'm',
+    'p', 'l', 'e', '.', 'c', 'o', 'm', ' ',
+    'S', 'I', 'P', '/', '2', '.', '0', '\r',
+    '\n', 'V', 'i', 'a', ':', ' ', 'S', 'I',
+    'P', '/', '2', '.', '0', '/', 'U', 'D',
+    'P', ' ', 'e', 'x', 'a', 'm', 'p', 'l',
+    'e', '.', 'c', 'o', 'm', ';', 'b', 'r',
+    'a', 'n', 'c', 'h', '=', 'z', '9', 'h',
+    'G', '4', 'b', 'K', '\r', '\n', 'M', 'a',
+    'x', '-', 'F', 'o', 'r', 'w', 'a', 'r',
+    'd', 's', ':', ' ', '7', '0', '\r', '\n',
+    'F', 'r', 'o', 'm', ':', ' ', '<', 's',
+    'i', 'p', ':', 'e', 'x', 'a', 'm', 'p',
+    'l', 'e', '@', 'e', 'x', 'a', 'm', 'p',
+    'l', 'e', '.', 'c', 'o', 'm', '>', ';',
+    't', 'a', 'g', '=', '1', '2', '3', '4',
+    '5', '\r', '\n', 'T', 'o', ':', ' ', '<',
+    's', 'i', 'p', ':', 'e', 'x', 'a', 'm',
+    'p', 'l', 'e', '@', 'e', 'x', 'a', 'm',
+    'p', 'l', 'e', '.', 'c', 'o', 'm', '>',
+    '\r', '\n', 'C', 'a', 'l', 'l', '-', 'I',
+    'D', ':', ' ', 'a', 'b', 'c', 'd', 'e',
+    'f', 'g', '\r', '\n', 'C', 'S', 'e', 'q',
+    ':', ' ', '1', ' ', 'O', 'P', 'T', 'I',
+    'O', 'N', 'S', '\r', '\n', 'C', 'o', 'n',
+    't', 'a', 'c', 't', ':', ' ', '<', 's',
+    'i', 'p', ':', 'e', 'x', 'a', 'm', 'p',
+    'l', 'e', '@', 'e', 'x', 'a', 'm', 'p',
+    'l', 'e', '.', 'c', 'o', 'm', '>', '\r',
+    '\n', 'A', 'c', 'c', 'e', 'p', 't', ':',
+    ' ', 'a', 'p', 'p', 'l', 'i', 'c', 'a',
+    't', 'i', 'o', 'n', '/', 's', 'd', 'p',
+    '\r', '\n', 'C', 'o', 'n', 't', 'e', 'n',
+    't', '-', 'L', 'e', 'n', 'g', 't', 'h',
+    ':', ' ', '0', '\r', '\n', '\r', '\n'
+};
+
+// TFTP read request for filename "default"
+const uint8_t tftp_read_request[] = {
+    0x00, 0x01, 0x64, 0x65, 0x66, 0x61, 0x75, 0x6C,
+    0x74, 0x00, 0x6F, 0x63, 0x74, 0x65, 0x74, 0x00
+};
+
+// RPC portmap request
+const uint8_t rpc_portmap_request[] = {
+    0x80, 0x00, 0x00, 0x28, 0x6F, 0xFD, 0x73, 0x5F,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+    0x00, 0x01, 0x86, 0xA0, 0x00, 0x00, 0x00, 0x04,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+
+static const udp_payload_t udp_payloads[] = {
+    {53,   "domain",   dns_query,          sizeof(dns_query)},
+    {69,   "tftp",     tftp_read_request,  sizeof(tftp_read_request)},
+    {111,  "rpcbind",  rpc_portmap_request,sizeof(rpc_portmap_request)},
+    {161,  "snmp",     snmp_query,         sizeof(snmp_query)},
+    {123,  "ntp",      ntp_query,          sizeof(ntp_query)},
+    {137,  "netbios",  netbios_query,      sizeof(netbios_query)},
+    {5060, "sip",      sip_options,        sizeof(sip_options)},
+    {0,    NULL,       NULL,               0}
+};
+
+const udp_payload_t *get_udp_payload(uint16_t port) {
+    for (int i = 0; udp_payloads[i].port != 0; i++) {
+        if (udp_payloads[i].port == port) {
+            return &udp_payloads[i];
+        }
+    }
+    return NULL;
+}
+
 int send_udp_probe(int raw_socket, const char *target_ip, uint16_t port) {
-    const uint8_t *payload_data = dns_query;
-    size_t payload_len = sizeof(dns_query);
+    const udp_payload_t *payload_info = get_udp_payload(port);
+    const uint8_t *payload_data;
+    size_t payload_len;
+    
+    if (payload_info) {
+        payload_data = payload_info->payload;
+        payload_len = payload_info->payload_len;
+        V_PRINT(2, "Using %s payload for port %d\n", payload_info->service, port);
+    } else {
+        static const uint8_t empty_payload[] = {0};
+        payload_data = empty_payload;
+        payload_len = sizeof(empty_payload);
+        V_PRINT(2, "Using empty payload for port %d\n", port);
+    }
 
     char packet[sizeof(struct iphdr) + sizeof(struct udphdr) + 512];
     struct iphdr *ip_header = (struct iphdr *)packet;
@@ -128,7 +237,6 @@ int send_udp_probe(int raw_socket, const char *target_ip, uint16_t port) {
     memset(packet, 0, sizeof(packet));
     memcpy(payload, payload_data, payload_len);
 
-    // IP header
     ip_header->version = 4;
     ip_header->ihl = 5;
     ip_header->tos = 0;
@@ -142,19 +250,16 @@ int send_udp_probe(int raw_socket, const char *target_ip, uint16_t port) {
     ip_header->check = 0;
     ip_header->check = calculate_checksum((uint16_t *)ip_header, sizeof(struct iphdr));
 
-    // UDP header
     udp_header->source = htons(rand() % 30000 + 32768);
     udp_header->dest = htons(port);
     udp_header->len = htons(sizeof(struct udphdr) + payload_len);
     udp_header->check = 0;
 
-    // Destination
     struct sockaddr_in dest_addr;
     dest_addr.sin_family = AF_INET;
     dest_addr.sin_addr.s_addr = inet_addr(target_ip);
     dest_addr.sin_port = htons(port);
 
-    // Send packet
     if (sendto(raw_socket, packet, sizeof(struct iphdr) + sizeof(struct udphdr) + payload_len, 0,
                (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0) {
         perror("sendto");
@@ -163,7 +268,6 @@ int send_udp_probe(int raw_socket, const char *target_ip, uint16_t port) {
 
     return 0;
 }
-
 
 int create_raw_socket(void) {
     int sock = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
@@ -192,6 +296,7 @@ void send_udp(scan_thread_data *data, t_port *current, struct ip *ip, struct soc
     if (udp_socket < 0) {
         return;
     }
+    
     current->tcp_udp = "udp";
     if (send_udp_probe(udp_socket, g_config.ip, current->port) < 0) {
         fprintf(stderr, "Failed to send probe to port %d\n", current->port);
@@ -259,10 +364,9 @@ void *scan_thread(void *arg) {
     char datagram[4096] = {0};
     struct tcphdr *tcp = (struct tcphdr *)(datagram + sizeof(struct ip));
     struct ip *ip = (struct ip *)datagram;
-    const char *src_ip = get_interface_ip(g_config.ip);
     uint8_t *tcp_options = set_options(datagram);
 
-    V_PRINT(2, "Using source IP %s\n", src_ip);
+    V_PRINT(2, "Using source IP %s\n", g_config.src_ip);
     send_packets(data, current_port, datagram, tcp, ip, tcp_options);
     
     V_PRINT(1, "Completed scanning %d ports\n", data->end_range - data->start_range);

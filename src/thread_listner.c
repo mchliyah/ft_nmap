@@ -1,96 +1,5 @@
 #include "../include/ft_nmap.h"
 
-
-struct tcphdr *tcph;
-
-char *extract_udp_service_from_payload(const unsigned char *payload, size_t payload_len, uint16_t port) {
-    if (!payload || payload_len == 0) {
-        return NULL;
-    }
-
-    if (port == 53 && payload_len >= 12) {
-        if (payload[2] & 0x80) {
-            return strdup("dns");
-        }
-    }
-
-    else if ((port == 67 || port == 68) && payload_len >= 240) {
-        if (payload_len > 240 && 
-            payload[236] == 0x63 && payload[237] == 0x82 && 
-            payload[238] == 0x53 && payload[239] == 0x63) {
-            return strdup("dhcp");
-        }
-    }
-
-    else if (port == 161 && payload_len >= 2) {
-        if (payload[0] == 0x30) {
-            return strdup("snmp");
-        }
-    }
-
-    else if (port == 123 && payload_len >= 48) {
-        uint8_t version = (payload[0] >> 3) & 0x07;
-        uint8_t mode = payload[0] & 0x07;
-        if (version >= 1 && version <= 4 && mode >= 1 && mode <= 5) {
-            return strdup("ntp");
-        }
-    }
-
-    else if (port == 137 && payload_len >= 12) {
-        if (payload[2] & 0x80) {
-            return strdup("netbios-ns");
-        }
-    }
-    else if (port == 69 && payload_len >= 4) {
-        uint16_t opcode = (payload[0] << 8) | payload[1];
-        if (opcode >= 1 && opcode <= 5) {
-            return strdup("tftp");
-        }
-    }
-
-    else if (port == 111 && payload_len >= 28) {
-        uint32_t msg_type = (payload[4] << 24) | (payload[5] << 16) | (payload[6] << 8) | payload[7];
-        uint32_t rpc_version = (payload[8] << 24) | (payload[9] << 16) | (payload[10] << 8) | payload[11];
-        if (msg_type == 1 && rpc_version == 2) {
-            return strdup("rpcbind");
-        }
-    }
-
-    else if (port == 1434 && payload_len > 0) {
-        if (payload[0] == 0x05) {
-            return strdup("ms-sql-m");
-        }
-    }
-    else if ((port == 1812 || port == 1813) && payload_len >= 20) {
-        uint8_t code = payload[0];
-        if (code >= 1 && code <= 13) {
-            return strdup("radius");
-        }
-    }
-    
-    else if (port == 5060 && payload_len > 8) {
-        if (strncmp((char*)payload, "SIP/2.0", 7) == 0) {
-            return strdup("sip");
-        }
-    }
-
-    else {
-        if (payload_len > 4 && strncmp((char*)payload, "HTTP", 4) == 0) {
-            return strdup("http");
-        }
-        if (payload_len > 3 && isdigit(payload[0]) && isdigit(payload[1]) && isdigit(payload[2])) {
-            return strdup("ftp");
-        }
-        
-        if (payload_len > 4 && strncmp((char*)payload, "SSH-", 4) == 0) {
-            return strdup("ssh");
-        }
-    }
-
-    return NULL;
-}
-
-
 void process_udp_response(const u_char *packet, int packet_len) {
     (void) packet_len;
     
@@ -103,13 +12,13 @@ void process_udp_response(const u_char *packet, int packet_len) {
     struct udphdr *udp_header = (struct udphdr *)(packet + sizeof(struct ether_header) + iplen);
     
     uint16_t src_port = ntohs(udp_header->uh_sport);
-    uint16_t dst_port = ntohs(udp_header->uh_dport);
+    // uint16_t dst_port = ntohs(udp_header->uh_dport);
     
     char response_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(iph->ip_src), response_ip, INET_ADDRSTRLEN);
     
-    printf("erspense ip : %s and port %u\n", response_ip, src_port);
-    printf("g_config ip : %s and port %u \n", g_config.ip, dst_port);
+    // printf("erspense ip : %s and port %u\n", response_ip, src_port);
+    // printf("g_config ip : %s and port %u \n", g_config.ip, dst_port);
     
     if (strcmp(response_ip, g_config.ip) != 0) {
         return;
@@ -167,7 +76,7 @@ void process_icmp_response(const u_char *packet, int packet_len) {
 }
 
 void process_tcp_packet(const struct pcap_pkthdr *header, const unsigned char *buffer, unsigned short iplen, struct ip *iph) {
-    tcph = (struct tcphdr *)(buffer + sizeof(struct ether_header) + iplen);
+    struct tcphdr *tcph = (struct tcphdr *)(buffer + sizeof(struct ether_header) + iplen);
     size_t tcplen = tcph->th_off * 4;
     const unsigned char *tcpdata = buffer + sizeof(struct ether_header) + iplen + tcplen;
     size_t data_len = header->caplen - (sizeof(struct ether_header) + iplen + tcplen);
@@ -234,43 +143,46 @@ void process_packet(unsigned char *user, const struct pcap_pkthdr *header, const
     if (iplen < 20) return;
     
     if (iph->ip_p == IPPROTO_ICMP) {
-        struct icmp *icmp_hdr = (struct icmp *)(buffer + (iph->ip_hl * 4));
-        char src_ip[INET_ADDRSTRLEN];
-        char dst_ip[INET_ADDRSTRLEN];
+        //debug vars and print
+        // struct icmp *icmp_hdr = (struct icmp *)(buffer + (iph->ip_hl * 4));
+        // char src_ip[INET_ADDRSTRLEN];
+        // char dst_ip[INET_ADDRSTRLEN];
         
-        strcpy(src_ip, inet_ntoa(iph->ip_src));
-        strcpy(dst_ip, inet_ntoa(iph->ip_dst));
+        // strcpy(src_ip, inet_ntoa(iph->ip_src));
+        // strcpy(dst_ip, inet_ntoa(iph->ip_dst));
         
-        PRINT_DEBUG("ICMP: %s -> %s, Type: %d, Code: %d\n", 
-               src_ip, dst_ip,
-               icmp_hdr->icmp_type, icmp_hdr->icmp_code);
+        // PRINT_DEBUG("ICMP: %s -> %s, Type: %d, Code: %d\n", 
+        //        src_ip, dst_ip,
+        //        icmp_hdr->icmp_type, icmp_hdr->icmp_code);
         process_icmp_response(buffer, header->caplen);
     }
     else if (iph->ip_p == IPPROTO_UDP && g_config.scan_types.udp) {
-        struct udphdr *udp_hdr = (struct udphdr *)(buffer + (iph->ip_hl * 4));
-        char src_ip[INET_ADDRSTRLEN];
-        char dst_ip[INET_ADDRSTRLEN];
+        //debug vars and print
+        // struct udphdr *udp_hdr = (struct udphdr *)(buffer + (iph->ip_hl * 4));
+        // char src_ip[INET_ADDRSTRLEN];
+        // char dst_ip[INET_ADDRSTRLEN];
         
-        strcpy(src_ip, inet_ntoa(iph->ip_src));
-        strcpy(dst_ip, inet_ntoa(iph->ip_dst));
+        // strcpy(src_ip, inet_ntoa(iph->ip_src));
+        // strcpy(dst_ip, inet_ntoa(iph->ip_dst));
         
-        PRINT_DEBUG("UDP: %s:%d -> %s:%d, Length: %d\n", 
-               src_ip, ntohs(udp_hdr->uh_sport),
-               dst_ip, ntohs(udp_hdr->uh_dport),
-               ntohs(udp_hdr->uh_ulen));
+        // PRINT_DEBUG("UDP: %s:%d -> %s:%d, Length: %d\n", 
+        //        src_ip, ntohs(udp_hdr->uh_sport),
+        //        dst_ip, ntohs(udp_hdr->uh_dport),
+        //        ntohs(udp_hdr->uh_ulen));
         process_udp_response(buffer, header->caplen);
     } 
     else if (iph->ip_p == IPPROTO_TCP) { 
-        struct tcphdr *tcp_hdr = (struct tcphdr *)(buffer + (iph->ip_hl * 4));
-        char src_ip[INET_ADDRSTRLEN];
-        char dst_ip[INET_ADDRSTRLEN];
+        //debug vars and print
+        // struct tcphdr *tcp_hdr = (struct tcphdr *)(buffer + (iph->ip_hl * 4));
+        // char src_ip[INET_ADDRSTRLEN];
+        // char dst_ip[INET_ADDRSTRLEN];
         
-        strcpy(src_ip, inet_ntoa(iph->ip_src));
-        strcpy(dst_ip, inet_ntoa(iph->ip_dst));
+        // strcpy(src_ip, inet_ntoa(iph->ip_src));
+        // strcpy(dst_ip, inet_ntoa(iph->ip_dst));
         
-        PRINT_DEBUG("TCP: %s:%d -> %s:%d\n", 
-               src_ip, ntohs(tcp_hdr->th_sport),
-               dst_ip, ntohs(tcp_hdr->th_dport));
+        // PRINT_DEBUG("TCP: %s:%d -> %s:%d\n", 
+        //        src_ip, ntohs(tcp_hdr->th_sport),
+        //        dst_ip, ntohs(tcp_hdr->th_dport));
         process_tcp_packet(header, buffer, iplen, iph);
     }
 }
