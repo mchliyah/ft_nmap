@@ -37,6 +37,8 @@ const char *port_state_to_string(int state) {
 }
 
 void print_scan_result(void) {
+     V_PRINT(1, "Completed %s Scan at %s, %.2fs elapsed (%d total ports)\n",
+           get_scan_type_name(), ctime(&g_config.scan_start_time), difftime(time(NULL), g_config.scan_start_time), g_config.port_count);
     if (g_config.reason) {
         printf("PORT       STATE        SERVICE      REASON\n");
     } else {

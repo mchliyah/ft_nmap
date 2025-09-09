@@ -31,4 +31,14 @@
             pthread_mutex_unlock(&g_config.print_mutex); \
     } while (0)
 
-#endif
+
+// #define INIT_SCAN()
+//     do { 
+//         g_config.speedup = (g_config.speedup < 1) ? 1 : 
+//         (g_config.speedup > 250) ? 250 : g_config.speedup; 
+//         srand(time(NULL)); 
+//         g_config.scan_start_time = time(NULL); 
+//         g_config.src_ip = get_interface_ip(g_config.ip); 
+//         printf("Nmap scan report for %snn", g_config.ip); 
+//     } while(0)
+    #endif

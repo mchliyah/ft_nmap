@@ -76,7 +76,7 @@ void cleanup(pthread_t *threads, pthread_t global_listener) {
 void timeout_scan_result( pthread_t global_listener) {
 
         if (!g_config.scan_complete) {
-        int additional_wait = 3;
+        int additional_wait = g_config.timeout;
         time_t wait_start = time(NULL);
         while (!g_config.scan_complete && (time(NULL) - wait_start) < additional_wait) {
             if ((time(NULL) - g_config.scan_start_time) > g_config.timeout) {
@@ -121,29 +121,34 @@ int set_socket(){
 }
 
 void run_scan() {
-
-    // init threads 
-    pthread_t global_listener;
-    pthread_t threads[g_config.speedup];
-    scan_thread_data thread_data[g_config.speedup];
-
-    time_t scan_start = time(NULL);
-    start_thread_listner(&global_listener);
-    usleep(100000);
+    if (g_config.ip_list[0]){
+        g_config.src_ip = get_interface_ip(g_config.ip_list[0]);
+    }
+    
     int sock = set_socket();
-    start_sender_threads(sock, threads, thread_data);
-    for (int i = 0; i < g_config.speedup; i++) {
-        pthread_join(threads[i], NULL);
-    }
-    
-    // Finalize UDP scan results - mark unresponsive ports as open|filtered
-    if (g_config.scan_types.udp) {
-        finalize_udp_scan();
-    }
-    
-    V_PRINT(1, "Completed %s Scan at %s, %.2fs elapsed (%d total ports)\n",
-           get_scan_type_name(), ctime(&scan_start), difftime(time(NULL), scan_start), g_config.port_count);
-    close(sock);
-    timeout_scan_result(global_listener);
+    pthread_t global_listener;
+    for (int ip_index = 0; ip_index < g_config.ip_count; ip_index++) {
+        g_config.ip = g_config.ip_list[ip_index];
+        V_PRINT(1, "Scanning %s\n", g_config.ip);
+        
+        pthread_t threads[g_config.speedup];
+        scan_thread_data thread_data[g_config.speedup];
 
+        start_thread_listner(&global_listener);
+        usleep(100000);
+        start_sender_threads(sock, threads, thread_data);
+
+        for (int i = 0; i < g_config.speedup; i++) {
+            pthread_join(threads[i], NULL);
+        }
+        
+        V_PRINT(1, "Completed %s Scan for %s at %s, %.2fs elapsed (%d total ports)\n",
+        get_scan_type_name(), g_config.ip, ctime(&g_config.scan_start_time), 
+        difftime(time(NULL), g_config.scan_start_time), g_config.port_count);
+        if (ip_index < g_config.ip_count - 1) {
+            printf("\n");
+        }
+    }
+    timeout_scan_result(global_listener);
+    close(sock);
 }

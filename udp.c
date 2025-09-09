@@ -1,4 +1,5 @@
 #include "udp.h"
+#include  "./include/verbose.h"
 
 scanner_context_t *g_scanner_ctx = NULL;
 
@@ -251,6 +252,7 @@ void process_icmp_response(const u_char *packet, int packet_len, scanner_context
         for (int i = 0; i < ctx->port_count; i++) {
             if (ctx->results[i].port == port) {
                 ctx->results[i].status = PORT_CLOSED;
+                printf("the port closed\n");
                 break;
             }
         }
@@ -270,6 +272,7 @@ void process_udp_response(const u_char *packet, int packet_len, scanner_context_
     for (int i = 0; i < ctx->port_count; i++) {
         if (ctx->results[i].port == port) {
             ctx->results[i].status = PORT_OPEN;
+            printf("geting port open\n ");
             break;
         }
     }
