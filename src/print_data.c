@@ -28,16 +28,31 @@ void print_debug(void) {
 
 const char *port_state_to_string(int state) {
     switch (state) {
-        case STATE_OPEN:   return "OPEN";
-        case STATE_CLOSED: return "CLOSED";
-        case STATE_FILTERED:return "FILTERED";
-        case STATE_OPEN_FILTERED: return "OPEN|FILTERED";
+        case STATE_OPEN:   return "open";
+        case STATE_CLOSED: return "closed";
+        case STATE_FILTERED:return "filtred";
+        case STATE_OPEN_FILTERED: return "open|filtred";
         default:          return NULL;
     }
 }
 
+void print_port(t_port *current) {
+    if (g_config.reason || g_config.verbose > 2 ) {
+        printf("%d/%-4s  %-12s %-12s %s\n", current->port, current->tcp_udp, 
+               port_state_to_string(current->state), 
+               current->service ? current->service : "unknown",
+               current->reason ? current->reason : "no-response");
+    } else {
+        printf("%d/%-4s  %-12s %s\n", current->port, current->tcp_udp, 
+               port_state_to_string(current->state), 
+               current->service ? current->service : "unknown");
+    }
+}
+
 void print_scan_result(void) {
-    if (g_config.reason) {
+     V_PRINT(1, "Completed %s Scan at %s, %.2fs elapsed (%d total ports)\n",
+           get_scan_type_name(), ctime(&g_config.scan_start_time), difftime(time(NULL), g_config.scan_start_time), g_config.port_count);
+    if (g_config.reason || g_config.verbose > 2) {
         printf("PORT       STATE        SERVICE      REASON\n");
     } else {
         printf("PORT       STATE        SERVICE\n");
@@ -45,19 +60,18 @@ void print_scan_result(void) {
     t_port *current = g_config.port_list;
     
 
-    while (current) {
-        if (current->to_print) {
-            if (g_config.reason) {
-                printf("%d/%-4s  %-12s %-12s %s\n", current->port, current->tcp_udp, 
-                       port_state_to_string(current->state), 
-                       current->service ? current->service : "unknown",
-                       current->reason ? current->reason : "no-response");
-            } else {
-                printf("%d/%-4s  %-12s %s\n", current->port, current->tcp_udp, 
-                       port_state_to_string(current->state), 
-                       current->service ? current->service : "unknown");
-            }
+    if (!g_config.is_port_default){
+        while (current) {
+            print_port(current);
+            current = current->next;
         }
-        current = current->next;
+    }
+    else if (g_config.is_port_default){
+        while (current) {
+            if (current->to_print) {
+                print_port(current);
+            }
+            current = current->next;
+        }
     }
 }

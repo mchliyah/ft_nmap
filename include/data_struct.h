@@ -1,6 +1,8 @@
 #include "libs.h"
 #include "verbose.h"
 
+
+
 // scan types
 
 typedef enum scan_type {
@@ -13,6 +15,13 @@ typedef enum scan_type {
     SCAN_UDP  = 32
 } scan_type ;
 
+struct icmp_header {
+    uint8_t type;
+    uint8_t code;
+    uint16_t checksum;
+    uint32_t unused;
+};
+
 // port states
 
 typedef enum port_state {
@@ -22,7 +31,6 @@ typedef enum port_state {
     STATE_FILTERED  = 4,
     STATE_OPEN_FILTERED = 5
 } port_state ;
-
 
 // defaults values
 #define P_SIZE          65535
@@ -49,6 +57,7 @@ typedef enum port_state {
     .ports               =  NULL, \
     .scans               =  NULL, \
     .port_list           =  NULL, \
+    .is_port_default     = false,  \
     .verbose             =  0,    \
     .reason              =  0,    \
     .ip_count            =  0,    \
@@ -66,6 +75,13 @@ typedef enum port_state {
     .print_mutex         =  PTHREAD_MUTEX_INITIALIZER, \
     .socket_mutex        =  PTHREAD_MUTEX_INITIALIZER \
 }
+
+#ifndef ICMP_DEST_UNREACH
+#define ICMP_DEST_UNREACH 3
+#endif
+#ifndef ICMP_PORT_UNREACH
+#define ICMP_PORT_UNREACH 3
+#endif
 
 typedef struct {
     const char *name;
@@ -101,6 +117,7 @@ typedef struct {
     int ip_count;
     char *file;
     char *ports;
+    bool is_port_default;
     char *scans;
     int verbose;
     int reason;
@@ -147,3 +164,10 @@ struct pseudo_header {
     unsigned short tcp_length;
     struct tcphdr tcp;
 };
+
+typedef struct {
+    uint16_t port;
+    const char *service;
+    const uint8_t *payload;
+    size_t payload_len;
+} udp_payload_t;
