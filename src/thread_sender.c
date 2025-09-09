@@ -1,6 +1,6 @@
 #include "../include/ft_nmap.h"
 
-uint16_t calculate_udp_checksum(uint16_t *buf, int len) {
+uint16_t calculate_checksum(uint16_t *buf, int len) {
     uint32_t sum = 0;
     
     while (len > 1) {
@@ -15,7 +15,6 @@ uint16_t calculate_udp_checksum(uint16_t *buf, int len) {
     while (sum >> 16) {
         sum = (sum & 0xFFFF) + (sum >> 16);
     }
-    
     return (uint16_t)(~sum);
 }
 
@@ -32,13 +31,13 @@ void    send_to(int sock, char *datagram, size_t len, int flags, struct sockaddr
 }
 
 void send_syn(scan_thread_data *data ,t_port *current, struct tcphdr *tcp, struct ip *ip, struct sockaddr_in target, char *datagram, uint8_t *tcp_options) {
-        set_ip_header(ip, g_config.src_ip, &target, IPPROTO_TCP);
-        set_tcp_header(tcp, SCAN_SYN);
-        tcp->th_dport = htons(current->port);
-        ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
-        tcp->th_sum = calculate_tcp_checksum(ip, tcp, tcp_options, 4);
-        send_to(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
-                   (struct sockaddr *)&target, sizeof(target));
+    set_ip_header(ip, g_config.src_ip, &target, IPPROTO_TCP);
+    set_tcp_header(tcp, SCAN_SYN);
+    tcp->th_dport = htons(current->port);
+    ip->ip_sum = csum((unsigned short *)ip, sizeof(struct ip) / 2);
+    tcp->th_sum = calculate_tcp_checksum(ip, tcp, tcp_options, 4);
+    send_to(data->sock, datagram, sizeof(struct ip) + sizeof(struct tcphdr) + 4, 0,
+               (struct sockaddr *)&target, sizeof(target));
 
 }
 
@@ -83,135 +82,6 @@ void send_ack(scan_thread_data *data, t_port *current, struct tcphdr *tcp, struc
              (struct sockaddr *)&target, sizeof(target));
 }
 
-uint16_t calculate_checksum(uint16_t *buf, int len) {
-    uint32_t sum = 0;
-    
-    while (len > 1) {
-        sum += *buf++;
-        len -= 2;
-    }
-    
-    if (len == 1) {
-        sum += *(uint8_t *)buf;
-    }
-    
-    while (sum >> 16) {
-        sum = (sum & 0xFFFF) + (sum >> 16);
-    }
-    
-    return (uint16_t)(~sum);
-}
-
-// Common UDP payloads
-const uint8_t dns_query[] = {
-    0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x03, 'w', 'w', 'w',
-    0x06, 'g', 'o', 'o', 'g', 'l', 'e', 0x03, 'c', 'o', 'm',
-    0x00, 0x00, 0x01, 0x00, 0x01
-};
-
-const uint8_t snmp_query[] = {
-    0x30, 0x26, 0x02, 0x01, 0x00, 0x04, 0x06, 0x70,
-    0x75, 0x62, 0x6c, 0x69, 0x63, 0xA0, 0x19, 0x02,
-    0x01, 0x01, 0x02, 0x01, 0x00, 0x02, 0x01, 0x00,
-    0x30, 0x0E, 0x30, 0x0C, 0x06, 0x08, 0x2B, 0x06,
-    0x01, 0x02, 0x01, 0x01, 0x01, 0x00, 0x05, 0x00
-};
-
-const uint8_t ntp_query[] = {
-    0xE3, 0x00, 0x04, 0xFA, 0x00, 0x01, 0x00, 0x00,
-    0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-const uint8_t netbios_query[] = {
-    0x80, 0x94, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x20, 0x43, 0x4B, 0x41,
-    0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41,
-    0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41,
-    0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41,
-    0x41, 0x41, 0x41, 0x41, 0x41, 0x00, 0x00, 0x21,
-    0x00, 0x01
-};
-
-const uint8_t sip_options[] = {
-    'O', 'P', 'T', 'I', 'O', 'N', 'S', ' ',
-    's', 'i', 'p', ':', 'e', 'x', 'a', 'm',
-    'p', 'l', 'e', '@', 'e', 'x', 'a', 'm',
-    'p', 'l', 'e', '.', 'c', 'o', 'm', ' ',
-    'S', 'I', 'P', '/', '2', '.', '0', '\r',
-    '\n', 'V', 'i', 'a', ':', ' ', 'S', 'I',
-    'P', '/', '2', '.', '0', '/', 'U', 'D',
-    'P', ' ', 'e', 'x', 'a', 'm', 'p', 'l',
-    'e', '.', 'c', 'o', 'm', ';', 'b', 'r',
-    'a', 'n', 'c', 'h', '=', 'z', '9', 'h',
-    'G', '4', 'b', 'K', '\r', '\n', 'M', 'a',
-    'x', '-', 'F', 'o', 'r', 'w', 'a', 'r',
-    'd', 's', ':', ' ', '7', '0', '\r', '\n',
-    'F', 'r', 'o', 'm', ':', ' ', '<', 's',
-    'i', 'p', ':', 'e', 'x', 'a', 'm', 'p',
-    'l', 'e', '@', 'e', 'x', 'a', 'm', 'p',
-    'l', 'e', '.', 'c', 'o', 'm', '>', ';',
-    't', 'a', 'g', '=', '1', '2', '3', '4',
-    '5', '\r', '\n', 'T', 'o', ':', ' ', '<',
-    's', 'i', 'p', ':', 'e', 'x', 'a', 'm',
-    'p', 'l', 'e', '@', 'e', 'x', 'a', 'm',
-    'p', 'l', 'e', '.', 'c', 'o', 'm', '>',
-    '\r', '\n', 'C', 'a', 'l', 'l', '-', 'I',
-    'D', ':', ' ', 'a', 'b', 'c', 'd', 'e',
-    'f', 'g', '\r', '\n', 'C', 'S', 'e', 'q',
-    ':', ' ', '1', ' ', 'O', 'P', 'T', 'I',
-    'O', 'N', 'S', '\r', '\n', 'C', 'o', 'n',
-    't', 'a', 'c', 't', ':', ' ', '<', 's',
-    'i', 'p', ':', 'e', 'x', 'a', 'm', 'p',
-    'l', 'e', '@', 'e', 'x', 'a', 'm', 'p',
-    'l', 'e', '.', 'c', 'o', 'm', '>', '\r',
-    '\n', 'A', 'c', 'c', 'e', 'p', 't', ':',
-    ' ', 'a', 'p', 'p', 'l', 'i', 'c', 'a',
-    't', 'i', 'o', 'n', '/', 's', 'd', 'p',
-    '\r', '\n', 'C', 'o', 'n', 't', 'e', 'n',
-    't', '-', 'L', 'e', 'n', 'g', 't', 'h',
-    ':', ' ', '0', '\r', '\n', '\r', '\n'
-};
-
-// TFTP read request for filename "default"
-const uint8_t tftp_read_request[] = {
-    0x00, 0x01, 0x64, 0x65, 0x66, 0x61, 0x75, 0x6C,
-    0x74, 0x00, 0x6F, 0x63, 0x74, 0x65, 0x74, 0x00
-};
-
-// RPC portmap request
-const uint8_t rpc_portmap_request[] = {
-    0x80, 0x00, 0x00, 0x28, 0x6F, 0xFD, 0x73, 0x5F,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
-    0x00, 0x01, 0x86, 0xA0, 0x00, 0x00, 0x00, 0x04,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-
-static const udp_payload_t udp_payloads[] = {
-    {53,   "domain",   dns_query,          sizeof(dns_query)},
-    {69,   "tftp",     tftp_read_request,  sizeof(tftp_read_request)},
-    {111,  "rpcbind",  rpc_portmap_request,sizeof(rpc_portmap_request)},
-    {161,  "snmp",     snmp_query,         sizeof(snmp_query)},
-    {123,  "ntp",      ntp_query,          sizeof(ntp_query)},
-    {137,  "netbios",  netbios_query,      sizeof(netbios_query)},
-    {5060, "sip",      sip_options,        sizeof(sip_options)},
-    {0,    NULL,       NULL,               0}
-};
-
-const udp_payload_t *get_udp_payload(uint16_t port) {
-    for (int i = 0; udp_payloads[i].port != 0; i++) {
-        if (udp_payloads[i].port == port) {
-            return &udp_payloads[i];
-        }
-    }
-    return NULL;
-}
 
 int send_udp_probe(int raw_socket, const char *target_ip, uint16_t port) {
     const udp_payload_t *payload_info = get_udp_payload(port);
@@ -270,7 +140,7 @@ int send_udp_probe(int raw_socket, const char *target_ip, uint16_t port) {
 }
 
 int create_raw_socket(void) {
-    int sock = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
+    int sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
     if (sock < 0) {
         perror("socket");
         return -1;
@@ -286,23 +156,13 @@ int create_raw_socket(void) {
     return sock;
 }
 
-void send_udp(scan_thread_data *data, t_port *current, struct ip *ip, struct sockaddr_in target, char *datagram) {
-    (void)datagram; 
-    (void)target;
-    (void)data;
-    (void)ip;
-    
-    int udp_socket = create_raw_socket();
-    if (udp_socket < 0) {
-        return;
-    }
-    
+void send_udp(scan_thread_data *data, t_port *current) {
+
     current->tcp_udp = "udp";
-    if (send_udp_probe(udp_socket, g_config.ip, current->port) < 0) {
+    if (send_udp_probe(data->sock, data->ips->ip, current->port) < 0) {
         fprintf(stderr, "Failed to send probe to port %d\n", current->port);
     }
 
-    close(udp_socket);
 }
 
 void send_packets(scan_thread_data *data, t_port *current_port, char *datagram, 
@@ -313,7 +173,7 @@ void send_packets(scan_thread_data *data, t_port *current_port, char *datagram,
         struct sockaddr_in target = {
             .sin_family = AF_INET,
             .sin_port = htons(current_port->port),
-            .sin_addr = { .s_addr = inet_addr(g_config.ip) }
+            .sin_addr = { .s_addr = inet_addr(data->ips->ip) }
         };
         
         if (g_config.scan_types.syn) send_syn(data, current_port, tcp, ip, target, datagram, tcp_options);
@@ -321,7 +181,7 @@ void send_packets(scan_thread_data *data, t_port *current_port, char *datagram,
         if (g_config.scan_types.fin) send_fin(data, current_port, tcp, ip, target, datagram, tcp_options);
         if (g_config.scan_types.xmas) send_xmas(data, current_port, tcp, ip, target, datagram, tcp_options);
         if (g_config.scan_types.ack) send_ack(data, current_port, tcp, ip, target, datagram, tcp_options);
-        if (g_config.scan_types.udp) send_udp(data, current_port, ip, target, datagram);
+        if (g_config.scan_types.udp) send_udp(data, current_port);
         
         usleep(1000);
         
@@ -344,7 +204,11 @@ uint8_t *set_options(char *datagram) {
 void *scan_thread(void *arg) {
 
     scan_thread_data *data = (scan_thread_data *)arg;
-    V_PRINT(1, "Starting scan of ports %d to %d\n", data->start_range, data->end_range);
+    int start = data->start_range;
+    int end = data->end_range;
+    // t_port *current = data->current;
+
+    V_PRINT(1, "Starting scan of ports %d to %d now\n", start, end);
     pthread_mutex_lock(&g_config.port_mutex);
     t_port *current_port = data->current;
     if (!current_port) {

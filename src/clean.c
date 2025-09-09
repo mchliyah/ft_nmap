@@ -1,18 +1,30 @@
 
 #include "../include/ft_nmap.h"
 
-void cleanup_ips(void) {
-    for (int i = 0; i < g_config.ip_count; i++) {
-        free(g_config.ip_list[i]);
+void free_ip_list(t_ips *ip_list) {
+    while (ip_list) {
+        t_ips *temp = ip_list;
+        ip_list = ip_list->next;
+        
+        free(temp->ip);
+        free(temp->resolve_hostname);
+        // free_ports()
+        t_port *port = temp->port_list;
+        while (port) {
+            t_port *port_temp = port;
+            port = port->next;
+            free(port_temp);
+        }
+        
+        free(temp);
     }
-    free(g_config.ip_list);
 }
 
-void cleanup_ports(void) {
-    t_port *current = g_config.port_list;
-    while (current) {
-        t_port *next = current->next;
-        free(current);
-        current = next;
-    }
-}
+// void cleanup_ports(void) {
+//     t_port *current = g_config.port_list;
+//     while (current) {
+//         t_port *next = current->next;
+//         free(current);
+//         current = next;
+//     }
+// }

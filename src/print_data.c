@@ -15,16 +15,6 @@ void print_help(void) {
     exit(0);
 }
 
-void print_debug(void) {
-    // Print configuration (for now)
-    printf("Scan Configurations:\n");
-    if (g_config.ip) printf("Target IP: %s\n", g_config.ip);
-    if (g_config.file) printf("Input File: %s\n", g_config.file);
-    printf("Ports: %s\n", g_config.ports ? g_config.ports : "1-1024 (default)");
-    printf("Scan types: %s\n", g_config.scans ? g_config.scans : "All");
-    printf("Speedup (threads): %d\n", g_config.speedup);
-}
-
 
 const char *port_state_to_string(int state) {
     switch (state) {
@@ -52,26 +42,31 @@ void print_port(t_port *current) {
 void print_scan_result(void) {
      V_PRINT(1, "Completed %s Scan at %s, %.2fs elapsed (%d total ports)\n",
            get_scan_type_name(), ctime(&g_config.scan_start_time), difftime(time(NULL), g_config.scan_start_time), g_config.port_count);
-    if (g_config.reason || g_config.verbose > 2) {
-        printf("PORT       STATE        SERVICE      REASON\n");
-    } else {
-        printf("PORT       STATE        SERVICE\n");
-    }
-    t_port *current = g_config.port_list;
-    
+    t_ips *ips = g_config.ips;
+    while (ips){
 
-    if (!g_config.is_port_default){
-        while (current) {
-            print_port(current);
-            current = current->next;
+        if (g_config.reason || g_config.verbose > 2) {
+            printf("PORT       STATE        SERVICE      REASON\n");
+        } else {
+            printf("PORT       STATE        SERVICE\n");
         }
-    }
-    else if (g_config.is_port_default){
-        while (current) {
-            if (current->to_print) {
+        t_port *current = ips->port_list;
+        if (!g_config.is_port_default){
+            while (current) {
                 print_port(current);
+                current = current->next;
             }
-            current = current->next;
         }
+        else if (g_config.is_port_default){
+            while (current) {
+                if (current->to_print) {
+                    print_port(current);
+                }
+                current = current->next;
+            }
+        }
+        ips = ips->next;
     }
+    // V_PRINT(1, "Scan completed in %.2f seconds\n", difftime(time(NULL), g_config.scan_start_time));
+
 }

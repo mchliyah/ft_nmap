@@ -52,7 +52,6 @@ typedef enum port_state {
 // configuration
 #define INIT_CONFIG() {           \
     .ip                  =  NULL, \
-    .ip_list             =  NULL, \
     .file                =  NULL, \
     .ports               =  NULL, \
     .scans               =  NULL, \
@@ -109,11 +108,18 @@ typedef struct t_port{
     struct t_port *next;
 } t_port;
 
-
+typedef struct ips
+{
+    char *ip;
+    char *resolve_hostname;
+    t_port *port_list;
+    struct ips *next;
+} t_ips;
 
 typedef struct {
     char *ip;
-    char **ip_list;
+    t_ips *ips;
+    // char **ip_list;
     int ip_count;
     char *file;
     char *ports;
@@ -142,6 +148,7 @@ typedef struct {
 typedef struct {
     int sock;
     int thread_id;
+    t_ips *ips;
     t_port *current;
     int start_range;
     int end_range;
