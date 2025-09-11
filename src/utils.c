@@ -86,7 +86,7 @@ const char* get_interface_ip(const char *target_ip) {
     }
 
     freeifaddrs(ifaddr);
-    return "10.0.0.78"; // ultimate fallback
+    return "10.0.0.78";
 }
 
 

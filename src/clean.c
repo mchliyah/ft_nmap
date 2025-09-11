@@ -8,7 +8,6 @@ void free_ip_list(t_ips *ip_list) {
         
         free(temp->ip);
         free(temp->resolve_hostname);
-        // free_ports()
         t_port *port = temp->port_list;
         while (port) {
             t_port *port_temp = port;
@@ -19,12 +18,3 @@ void free_ip_list(t_ips *ip_list) {
         free(temp);
     }
 }
-
-// void cleanup_ports(void) {
-//     t_port *current = g_config.port_list;
-//     while (current) {
-//         t_port *next = current->next;
-//         free(current);
-//         current = next;
-//     }
-// }
