@@ -54,7 +54,16 @@ static int add_ip_to_list(t_ips **ip_list, int *count, const char *ip, const cha
         return 0;
     }
     new_node->is_up = is_host_up(ip);
-    *ip_list = new_node;
+    new_node->next = NULL;
+     if (*ip_list == NULL) {
+        *ip_list = new_node;
+    } else {
+        t_ips *current = *ip_list;
+        while (current->next != NULL) {
+            current = current->next;
+        }
+        current->next = new_node;
+    }
     (*count)++;
     V_PRINT(1, "Completed Ping Scan at %s \n", get_current_time());
     return 1;
@@ -166,7 +175,6 @@ void parse_args(int argc, char **argv) {
         }
         
         const char *hostname = (strcmp(argv[optind], resolved_ip) != 0) ? argv[optind] : NULL;
-        
         if (!add_ip_to_list(&ip_list, &ip_count, resolved_ip, hostname)) {
             free(resolved_ip);
             free_ip_list(ip_list);

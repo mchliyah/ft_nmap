@@ -245,10 +245,10 @@ void add_port(int port, int state) {
         new_port->next = NULL;
 
         pthread_mutex_lock(&g_config.port_mutex);
-        if (!g_config.ips->port_list) {
-            g_config.ips->port_list = new_port;
+        if (!current_ip->port_list) {
+            current_ip->port_list = new_port;
         } else {
-            t_port *current = g_config.ips->port_list;
+            t_port *current = current_ip->port_list;
             while (current->next) {
                 current = current->next;
             }
