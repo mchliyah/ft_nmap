@@ -4,9 +4,9 @@ t_config g_config = INIT_CONFIG();
 
 void init_scan() {
     
-    V_PRINT(1, "Starting ft_nmap at %s", get_current_time());
+    printf("Starting Ft_nmap at %s \n", get_current_time());
     if (g_config.ip_count > 0) {
-        V_PRINT(1, "Scanning %d IP address(es)\n", g_config.ip_count);
+        V_PRINT(1, "Scanning %d IP address(es).\n", g_config.ip_count);
     } else if (g_config.file) {
         V_PRINT(1, "Scanning IPs from file: %s\n", g_config.file);
     }
@@ -20,7 +20,6 @@ void init_scan() {
     srand(time(NULL));
     g_config.scan_start_time = time(NULL);
     g_config.src_ip = get_interface_ip(g_config.ip);
-    printf("Nmap scan report for %d ip ", g_config.ip_count);
 }
 
 const char* get_current_time() {

@@ -39,34 +39,53 @@ void print_port(t_port *current) {
     }
 }
 
+bool there_is_ports(t_ips *ips){
+    t_port *port = ips->port_list;
+    while (port){
+        if (port->to_print)
+            return true;
+        port = port->next;
+    }
+    printf("nothing to print \n");
+    return false;
+}
+
 void print_scan_result(void) {
-     V_PRINT(1, "Completed %s Scan at %s, %.2fs elapsed (%d total ports)\n",
+
+    V_PRINT(1, "Completed %s Scan at %s, %.2fs elapsed (%d total ports)\n",
            get_scan_type_name(), ctime(&g_config.scan_start_time), difftime(time(NULL), g_config.scan_start_time), g_config.port_count);
     t_ips *ips = g_config.ips;
-    while (ips){
-
-        if (g_config.reason || g_config.verbose > 2) {
-            printf("PORT       STATE        SERVICE      REASON\n");
-        } else {
-            printf("PORT       STATE        SERVICE\n");
-        }
-        t_port *current = ips->port_list;
-        if (!g_config.is_port_default){
-            while (current) {
-                print_port(current);
-                current = current->next;
-            }
-        }
-        else if (g_config.is_port_default){
-            while (current) {
-                if (current->to_print) {
-                    print_port(current);
+    while (ips) {
+        if (ips->is_up){
+            printf("\nFt_nmap scan report for %s (%s)\n", ips->resolve_hostname? ips->resolve_hostname: "", ips->ip);
+            if (!g_config.is_port_default || there_is_ports(ips)){
+                if (g_config.reason || g_config.verbose > 2) {
+                    printf("PORT       STATE        SERVICE      REASON\n");
+                } else {
+                    printf("PORT       STATE        SERVICE\n");
                 }
-                current = current->next;
+                t_port *current = ips->port_list;
+                if (!g_config.is_port_default){
+                    while (current) {
+                        print_port(current);
+                        current = current->next;
+                    }
+                }
+                else if (g_config.is_port_default){
+                    while (current) {
+                        if (current->to_print) {
+                            print_port(current);
+                        }
+                        current = current->next;
+                    }
+                }
             }
-        }
+        }else
+            printf("host %s is down.\n", ips->ip);
         ips = ips->next;
+
     }
-    // V_PRINT(1, "Scan completed in %.2f seconds\n", difftime(time(NULL), g_config.scan_start_time));
+    printf("\nFt_nmap done: %d IP address (%d hosts up) scaned in %.2f seconds.\n", g_config.ip_count, g_config.up_hosts, difftime(time(NULL), g_config.scan_start_time));
+    
 
 }

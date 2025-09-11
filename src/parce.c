@@ -40,16 +40,32 @@ static t_ips *create_ip_node(const char *ip, const char *hostname) {
     return new_node;
 }
 
+static bool is_host_up(const char *ip) {
+    char command[256];
+    snprintf(command, sizeof(command), "ping -c 1 -W 1 %s > /dev/null 2>&1", ip);
+    int status = system(command);
+    return (status == 0);
+}
+
 static int add_ip_to_list(t_ips **ip_list, int *count, const char *ip, const char *hostname) {
+    V_PRINT(1, "Initiating Ping Scan %s \n", get_current_time());
     t_ips *new_node = create_ip_node(ip, hostname);
-    new_node->next = NULL;
     if (!new_node) {
         return 0;
     }
-
-    *ip_list = new_node;
+    new_node->is_up = is_host_up(ip);
+    new_node->next = NULL;
+     if (*ip_list == NULL) {
+        *ip_list = new_node;
+    } else {
+        t_ips *current = *ip_list;
+        while (current->next != NULL) {
+            current = current->next;
+        }
+        current->next = new_node;
+    }
     (*count)++;
-    
+    V_PRINT(1, "Completed Ping Scan at %s \n", get_current_time());
     return 1;
 }
 
@@ -90,7 +106,6 @@ void parse_args(int argc, char **argv) {
             
             case 'v': 
                 g_config.verbose++;
-                g_config.reason = 1;
                 printf("Increasing verbosity level to %d\n", g_config.verbose);
                 break;
                 
@@ -160,7 +175,6 @@ void parse_args(int argc, char **argv) {
         }
         
         const char *hostname = (strcmp(argv[optind], resolved_ip) != 0) ? argv[optind] : NULL;
-        
         if (!add_ip_to_list(&ip_list, &ip_count, resolved_ip, hostname)) {
             free(resolved_ip);
             free_ip_list(ip_list);
@@ -196,7 +210,6 @@ void parse_ports() {
     if (!g_config.ports) {
         V_PRINT(1, "No ports specified, defaulting to 1-1024\n");
         g_config.ports = DEFAULT_PORTS;
-        g_config.is_port_default = true;
         g_config.scan_type_count = 1;
     }
 
@@ -210,6 +223,8 @@ void parse_ports() {
         } else add_port_scantype(atoi(token));
         token = strtok(NULL, ",");
     }
+    if (g_config.port_count > 25)
+        g_config.is_port_default = true;
 }
 
 void set_scan_type(t_port *port, scan_type scan_type)

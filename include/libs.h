@@ -1,3 +1,5 @@
+#ifndef LIBS_H
+#define LIBS_H
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -30,3 +32,5 @@
 #include <linux/if_packet.h>
 #endif
 #include "linux_compat.h"
+
+#endif
