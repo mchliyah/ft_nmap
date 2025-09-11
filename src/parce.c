@@ -196,7 +196,6 @@ void parse_ports() {
     if (!g_config.ports) {
         V_PRINT(1, "No ports specified, defaulting to 1-1024\n");
         g_config.ports = DEFAULT_PORTS;
-        g_config.is_port_default = true;
         g_config.scan_type_count = 1;
     }
 
@@ -210,6 +209,8 @@ void parse_ports() {
         } else add_port_scantype(atoi(token));
         token = strtok(NULL, ",");
     }
+    if (g_config.port_count > 25)
+        g_config.is_port_default = true;
 }
 
 void set_scan_type(t_port *port, scan_type scan_type)

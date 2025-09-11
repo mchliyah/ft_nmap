@@ -44,7 +44,7 @@ void print_scan_result(void) {
            get_scan_type_name(), ctime(&g_config.scan_start_time), difftime(time(NULL), g_config.scan_start_time), g_config.port_count);
     t_ips *ips = g_config.ips;
     while (ips){
-
+        printf("result for host %s \n", ips->ip);
         if (g_config.reason || g_config.verbose > 2) {
             printf("PORT       STATE        SERVICE      REASON\n");
         } else {
