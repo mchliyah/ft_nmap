@@ -6,7 +6,7 @@ void init_scan() {
     
     printf("Starting Ft_nmap at %s \n", get_current_time());
     if (g_config.ip_count > 0) {
-        V_PRINT(1, "Scanning %d IP address(es)\n", g_config.ip_count);
+        V_PRINT(1, "Scanning %d IP address(es).\n", g_config.ip_count);
     } else if (g_config.file) {
         V_PRINT(1, "Scanning IPs from file: %s\n", g_config.file);
     }

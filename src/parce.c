@@ -48,6 +48,7 @@ static bool is_host_up(const char *ip) {
 }
 
 static int add_ip_to_list(t_ips **ip_list, int *count, const char *ip, const char *hostname) {
+    V_PRINT(1, "Initiating Ping Scan %s \n", get_current_time());
     t_ips *new_node = create_ip_node(ip, hostname);
     if (!new_node) {
         return 0;
@@ -55,6 +56,7 @@ static int add_ip_to_list(t_ips **ip_list, int *count, const char *ip, const cha
     new_node->is_up = is_host_up(ip);
     *ip_list = new_node;
     (*count)++;
+    V_PRINT(1, "Completed Ping Scan at %s \n", get_current_time());
     return 1;
 }
 
@@ -95,7 +97,6 @@ void parse_args(int argc, char **argv) {
             
             case 'v': 
                 g_config.verbose++;
-                g_config.reason = 1;
                 printf("Increasing verbosity level to %d\n", g_config.verbose);
                 break;
                 
