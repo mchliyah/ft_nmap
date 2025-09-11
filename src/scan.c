@@ -47,7 +47,6 @@ void start_sender_threads(int sock, pthread_t *threads, t_ips *current_ips, scan
     V_PRINT(1, "Initializing %s scan at %s\n", get_scan_type_name(), get_current_time_short());
     V_PRINT(1, "Scanning %s [%d ports]\n", current_ips->ip, g_config.port_count);
     for (int i = 0; i < g_config.speedup; i++) {
-        int end_range = start_range + ports_per_thread + (i < remaining_ports ? 1 : 0);
         thread_data[i] = (scan_thread_data){
             .sock = sock,
             .thread_id = i,
@@ -56,7 +55,6 @@ void start_sender_threads(int sock, pthread_t *threads, t_ips *current_ips, scan
             .start_range = start_range,
             .end_range = start_range + ports_per_thread + (i < remaining_ports ? 1 : 0)
         };
-        PRINT_DEBUG("start range : %d end range : %d remaining %d \n", start_range, end_range, remaining_ports);
         if (pthread_create(&threads[i], NULL, scan_thread, &thread_data[i]) != 0) {
             perror("pthread_create");
             exit(EXIT_FAILURE);
@@ -123,23 +121,41 @@ int set_socket(){
     return sock;
 }
 
+bool is_a_host_up(void){
+    t_ips *current_ips = g_config.ips;
+    while (current_ips){
+        if (current_ips->is_up)
+            g_config.up_hosts++;
+        current_ips = current_ips->next;
+    }
+    return g_config.up_hosts > 0;
+}
+
 void run_scan() {
     
     int sock = set_socket();
     pthread_t global_listener;
     t_ips *current_ips = g_config.ips;
-    while(current_ips) {
-        V_PRINT(1, "Scanning %s\n", current_ips->ip);
-        
-        pthread_t threads[g_config.speedup];
-        scan_thread_data thread_data[g_config.speedup];
+    bool hosts_up = is_a_host_up();
 
+    if (hosts_up){
         start_thread_listner(&global_listener);
         usleep(100000);
-        start_sender_threads(sock, threads, current_ips, thread_data);
+    }
 
-        for (int i = 0; i < g_config.speedup; i++) {
-            pthread_join(threads[i], NULL);
+    while(current_ips) {
+
+        V_PRINT(1, "Scanning %s\n", current_ips->ip);
+        if (current_ips){
+
+            pthread_t threads[g_config.speedup];
+            scan_thread_data thread_data[g_config.speedup];
+            
+            start_sender_threads(sock, threads, current_ips, thread_data);
+            
+            for (int i = 0; i < g_config.speedup; i++) {
+                pthread_join(threads[i], NULL);
+            }
         }
         
         V_PRINT(1, "Completed %s Scan for %s at %s, %.2fs elapsed (%d total ports)\n",
@@ -147,6 +163,7 @@ void run_scan() {
         difftime(time(NULL), g_config.scan_start_time), g_config.port_count);
         current_ips = current_ips->next;
     }
-    timeout_scan_result(global_listener);
+    if (hosts_up)
+        timeout_scan_result(global_listener);
     close(sock);
 }

@@ -18,8 +18,6 @@ void *scan_thread(void *arg);
 const char* find_interface_for_target(const char *target_ip);
 const char* get_interface_ip(const char *target_ip);
 void init_scan();
-void cleanup_ips(void);
-void cleanup_ports(void);
 void set_tcp_header(struct tcphdr *tcp, scan_type target_type);
 void set_ip_header(struct ip *ip, const char *src_ip, struct sockaddr_in *target, uint8_t protocol);
 

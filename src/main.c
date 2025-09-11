@@ -20,7 +20,7 @@ void init_scan() {
     srand(time(NULL));
     g_config.scan_start_time = time(NULL);
     g_config.src_ip = get_interface_ip(g_config.ip);
-    printf("Nmap scan report for %d ip ", g_config.ip_count);
+    // printf("Nmap scan report for %d ip ", g_config.ip_count);
 }
 
 const char* get_current_time() {

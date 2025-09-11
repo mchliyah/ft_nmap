@@ -40,16 +40,21 @@ static t_ips *create_ip_node(const char *ip, const char *hostname) {
     return new_node;
 }
 
+static bool is_host_up(const char *ip) {
+    char command[256];
+    snprintf(command, sizeof(command), "ping -c 1 -W 1 %s > /dev/null 2>&1", ip);
+    int status = system(command);
+    return (status == 0);
+}
+
 static int add_ip_to_list(t_ips **ip_list, int *count, const char *ip, const char *hostname) {
     t_ips *new_node = create_ip_node(ip, hostname);
-    new_node->next = NULL;
     if (!new_node) {
         return 0;
     }
-
+    new_node->is_up = is_host_up(ip);
     *ip_list = new_node;
     (*count)++;
-    
     return 1;
 }
 
