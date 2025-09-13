@@ -20,8 +20,8 @@ const char *port_state_to_string(int state) {
     switch (state) {
         case STATE_OPEN:   return "open";
         case STATE_CLOSED: return "closed";
-        case STATE_FILTERED:return "filtred";
-        case STATE_OPEN_FILTERED: return "open|filtred";
+        case STATE_FILTERED:return "filtered";
+        case STATE_OPEN_FILTERED: return "open|filtered";
         default:          return NULL;
     }
 }
