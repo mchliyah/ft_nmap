@@ -189,7 +189,7 @@ pcap_t *set_pcap(void){
     }
 
     if (g_config.scan_types.udp) {
-        snprintf(filter_exp, 100, "icmp or udp and host");
+        snprintf(filter_exp, 100, "icmp or udp");
     } else {
         snprintf(filter_exp, 100, "tcp");
     }

@@ -199,9 +199,9 @@ void parse_args(int argc, char **argv) {
 void add_port_scantype(int p){
     g_config.scan_types.udp && SCAN_UDP ? add_port(p, STATE_OPEN_FILTERED): NULL;
     g_config.scan_types.syn && SCAN_SYN ? add_port(p, STATE_FILTERED): NULL;
-    g_config.scan_types.null && SCAN_NULL ? add_port(p, STATE_OPEN): NULL;
-    g_config.scan_types.fin && SCAN_FIN ? add_port(p, STATE_OPEN): NULL;
-    g_config.scan_types.xmas && SCAN_XMAS ? add_port(p, STATE_OPEN): NULL;
+    g_config.scan_types.null && SCAN_NULL ? add_port(p, STATE_OPEN_FILTERED): NULL;
+    g_config.scan_types.fin && SCAN_FIN ? add_port(p, STATE_OPEN_FILTERED): NULL;
+    g_config.scan_types.xmas && SCAN_XMAS ? add_port(p, STATE_OPEN_FILTERED): NULL;
     g_config.scan_types.ack && SCAN_ACK ? add_port(p, STATE_FILTERED): NULL;
     !g_config.scan_type_count? add_port(p, STATE_FILTERED) : NULL;
 
