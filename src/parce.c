@@ -156,7 +156,6 @@ void parse_args(int argc, char **argv) {
                     }
                     
                     free(resolved_ip);
-                    free(file_ips[i]);
                 }
                 free_ip_array(file_ips, file_ip_count);
                 break;
