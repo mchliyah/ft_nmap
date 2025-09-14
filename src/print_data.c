@@ -64,7 +64,14 @@ void print_scan_result(void) {
     t_ips *ips = g_config.ips;
     while (ips) {
         if (ips->is_up){
-            printf("\nFt_nmap scan report for %s (%s)\n", ips->resolve_hostname? ips->resolve_hostname: "", ips->ip);
+            {
+                const char *name = (ips->resolve_hostname && ips->resolve_hostname[0]) ? ips->resolve_hostname : get_reverse_dns(ips->ip);
+                if (name && strcmp(name, "unknown") != 0 && strcmp(name, "invalid-ip") != 0 && strcmp(name, ips->ip) != 0) {
+                    printf("\nFt_nmap scan report for %s (%s)\n", name, ips->ip);
+                } else {
+                    printf("\nFt_nmap scan report for %s\n", ips->ip);
+                }
+            }
             if (!g_config.is_port_default || there_is_ports(ips)){
                 if (g_config.reason || g_config.verbose > 2) {
                     /* Match widths used in print_port(): PORT(9) STATE(12) SERVICE(12) REASON */
