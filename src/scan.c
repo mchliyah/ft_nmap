@@ -42,7 +42,7 @@ void start_sender_threads(int sock, pthread_t *threads, t_ips *current_ips, scan
     int start_range = 0;
     t_port *current = current_ips->port_list;
 
-    V_PRINT(1, "Scanning %s [%d ports]\n", current_ips->ip, g_config.port_count);
+    /* Scanning message is printed from run_scan() to avoid duplicate output */
     for (int i = 0; i < g_config.speedup; i++) {
         thread_data[i] = (scan_thread_data){
             .sock = sock,
@@ -138,8 +138,16 @@ void run_scan() {
         start_thread_listner(&global_listener);
         usleep(100000);
         while(current_ips) {
-            V_PRINT(1, "Scanning %s\n", current_ips->ip);
-            if (current_ips->is_up){
+                {
+                    const char *name = (current_ips->resolve_hostname && current_ips->resolve_hostname[0]) ?
+                        current_ips->resolve_hostname : get_reverse_dns(current_ips->ip);
+                    if (name && strcmp(name, "unknown") != 0 && strcmp(name, "invalid-ip") != 0 && strcmp(name, current_ips->ip) != 0) {
+                        V_PRINT(1, "Scanning %s (%s) [%d ports]\n", name, current_ips->ip, g_config.port_count);
+                    } else {
+                        V_PRINT(1, "Scanning %s [%d ports]\n", current_ips->ip, g_config.port_count);
+                    }
+                }
+            if (current_ips->is_up) {
 
                 pthread_t threads[g_config.speedup];
                 scan_thread_data thread_data[g_config.speedup];

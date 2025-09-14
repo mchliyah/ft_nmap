@@ -27,14 +27,21 @@ const char *port_state_to_string(int state) {
 }
 
 void print_port(t_port *current) {
+    char port_field[16];
+    snprintf(port_field, sizeof(port_field), "%d/%s", current->port, current->tcp_udp);
+
     if (g_config.reason || g_config.verbose > 2 ) {
-        printf("%d/%-4s  %-12s %-12s %s\n", current->port, current->tcp_udp, 
-               port_state_to_string(current->state), 
+        /* Columns: PORT (9), STATE (12), SERVICE (12), REASON */
+        printf("%-9s %-12s %-12s %s\n",
+               port_field,
+               port_state_to_string(current->state),
                current->service ? current->service : "unknown",
                current->reason ? current->reason : "no-response");
     } else {
-        printf("%d/%-4s  %-12s %s\n", current->port, current->tcp_udp, 
-               port_state_to_string(current->state), 
+        /* Columns: PORT (9), STATE (12), SERVICE (12) */
+        printf("%-9s %-12s %-12s\n",
+               port_field,
+               port_state_to_string(current->state),
                current->service ? current->service : "unknown");
     }
 }
@@ -57,12 +64,20 @@ void print_scan_result(void) {
     t_ips *ips = g_config.ips;
     while (ips) {
         if (ips->is_up){
-            printf("\nFt_nmap scan report for %s (%s)\n", ips->resolve_hostname? ips->resolve_hostname: "", ips->ip);
+            {
+                const char *name = (ips->resolve_hostname && ips->resolve_hostname[0]) ? ips->resolve_hostname : get_reverse_dns(ips->ip);
+                if (name && strcmp(name, "unknown") != 0 && strcmp(name, "invalid-ip") != 0 && strcmp(name, ips->ip) != 0) {
+                    printf("\nFt_nmap scan report for %s (%s)\n", name, ips->ip);
+                } else {
+                    printf("\nFt_nmap scan report for %s\n", ips->ip);
+                }
+            }
             if (!g_config.is_port_default || there_is_ports(ips)){
                 if (g_config.reason || g_config.verbose > 2) {
-                    printf("PORT       STATE        SERVICE      REASON\n");
+                    /* Match widths used in print_port(): PORT(9) STATE(12) SERVICE(12) REASON */
+                    printf("%-9s %-12s %-12s %s\n", "PORT", "STATE", "SERVICE", "REASON");
                 } else {
-                    printf("PORT       STATE        SERVICE\n");
+                    printf("%-9s %-12s %-12s\n", "PORT", "STATE", "SERVICE");
                 }
                 t_port *current = ips->port_list;
                 if (!g_config.is_port_default){

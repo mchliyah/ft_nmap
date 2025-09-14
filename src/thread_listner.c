@@ -159,20 +159,32 @@ pcap_t *set_pcap(void){
     char filter_exp[100];
     pcap_t *handle;
     const char *interface = find_interface_for_target(g_config.ip);
-    
+    char *iface_copy = NULL;
+
     if (!interface) {
         fprintf(stderr, "No valid interface found for target IP %s\n", g_config.ip);
         return NULL;
     }
 
-    if (pcap_lookupnet(interface, &netmask, &mask, errbuf) == -1) {
-        fprintf(stderr, "Can't get netmask for device %s err: %s\n", interface, errbuf);
+    /* Make a local copy so we can free the original returned string */
+    iface_copy = strdup(interface);
+    free((void*)interface);
+
+    if (!iface_copy) {
+        fprintf(stderr, "Failed to allocate memory for interface copy\n");
+        return NULL;
+    }
+
+    if (pcap_lookupnet(iface_copy, &netmask, &mask, errbuf) == -1) {
+        fprintf(stderr, "Can't get netmask for device %s err: %s\n", iface_copy, errbuf);
+        free(iface_copy);
         exit(EXIT_FAILURE);
     }
 
-    handle = pcap_open_live(interface, P_SIZE, 1, 1000, errbuf);
+    handle = pcap_open_live(iface_copy, P_SIZE, 1, 1000, errbuf);
     if (handle == NULL) {
-        fprintf(stderr, "Could not open device %s: %s\n", interface, errbuf);
+        fprintf(stderr, "Could not open device %s: %s\n", iface_copy, errbuf);
+        free(iface_copy);
         return NULL;
     }
 
@@ -194,8 +206,11 @@ pcap_t *set_pcap(void){
     }
     pcap_freecode(&fp);
 
-    V_PRINT(1, "Starting listener on interface %s\n", interface);
+    V_PRINT(1, "Starting listener on interface %s\n", iface_copy);
     V_PRINT(2, "Using filter: %s\n", filter_exp);
+
+    /* iface_copy no longer needed after pcap_open_live succeeded */
+    free(iface_copy);
 
     return handle;
 }
