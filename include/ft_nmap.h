@@ -39,8 +39,8 @@ char* process_target(const char* target);
 
 // service 
 
-const char *get_service_by_port(int port);
-const char *extract_service_from_payload(const unsigned char *payload, size_t payload_len, int port);   
+char *get_service_by_port(int port);
+char *extract_service_from_payload(const unsigned char *payload, size_t payload_len, int port);   
 
 
 const char* get_current_time_short();

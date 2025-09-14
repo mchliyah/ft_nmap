@@ -29,9 +29,9 @@ typedef struct t_scan_types {
 typedef struct t_port{
     int         port;
     port_state  state;
-    const char *service;
+    char *service;
     const char *tcp_udp;
-    const char *reason;
+    char *reason;
     bool        to_print;
     struct t_port *next;
 } t_port;
