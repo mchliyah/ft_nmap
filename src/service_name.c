@@ -1,34 +1,37 @@
 #include "../include/ft_nmap.h"
 
-const char *get_service_by_port(int port) {
+char *get_service_by_port(int port) {
+    const char *name = NULL;
     switch (port) {
-        case 21: return "ftp";
-        case 22: return "ssh";
-        case 23: return "telnet";
-        case 25: return "smtp";
-        case 53: return "domain";
-        case 80: return "http";
-        case 110: return "pop3";
-        case 143: return "imap";
-        case 443: return "https";
-        case 465: return "smtps";
-        case 587: return "submission";
-        case 853: return "domain-s";
-        case 993: return "imaps";
-        case 995: return "pop3s";
-        case 1433: return "ms-sql-s";
-        case 3306: return "mysql";
-        case 3389: return "rdp";
-        case 5432: return "postgresql";
-        case 6379: return "redis";
-        case 8080: return "http-proxy";
-        case 8443: return "https-alt";
-        case 27017: return "mongodb";
-        default: return NULL;
+        case 21: name = "ftp"; break;
+        case 22: name = "ssh"; break;
+        case 23: name = "telnet"; break;
+        case 25: name = "smtp"; break;
+        case 53: name = "domain"; break;
+        case 80: name = "http"; break;
+        case 110: name = "pop3"; break;
+        case 143: name = "imap"; break;
+        case 443: name = "https"; break;
+        case 465: name = "smtps"; break;
+        case 587: name = "submission"; break;
+        case 853: name = "domain-s"; break;
+        case 993: name = "imaps"; break;
+        case 995: name = "pop3s"; break;
+        case 1433: name = "ms-sql-s"; break;
+        case 3306: name = "mysql"; break;
+        case 3389: name = "rdp"; break;
+        case 5432: name = "postgresql"; break;
+        case 6379: name = "redis"; break;
+        case 8080: name = "http-proxy"; break;
+        case 8443: name = "https-alt"; break;
+        case 27017: name = "mongodb"; break;
+        default: name = NULL; break;
     }
+    if (name) return strdup(name);
+    return NULL;
 }
 
-const char *extract_service_from_payload(const unsigned char *payload, size_t payload_len, int port) {
+char *extract_service_from_payload(const unsigned char *payload, size_t payload_len, int port) {
     if (payload_len == 0) return NULL;
     
     size_t scan_len = payload_len > 1024 ? 1024 : payload_len;
@@ -87,5 +90,6 @@ const char *extract_service_from_payload(const unsigned char *payload, size_t pa
     }
     
     free(payload_str);
-    return service;
+    if (service) return strdup(service);
+    return NULL;
 }
