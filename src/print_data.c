@@ -73,7 +73,7 @@ void print_scan_result(void) {
                 }
             }
             if (!g_config.is_port_default || there_is_ports(ips)){
-                if (g_config.reason || g_config.verbose > 2) {
+                if (g_config.reason) {
                     /* Match widths used in print_port(): PORT(9) STATE(12) SERVICE(12) REASON */
                     printf("%-9s %-12s %-12s %s\n", "PORT", "STATE", "SERVICE", "REASON");
                 } else {

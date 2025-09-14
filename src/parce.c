@@ -106,6 +106,8 @@ void parse_args(int argc, char **argv) {
             
             case 'v': 
                 g_config.verbose++;
+                if (g_config.verbose > 1) 
+                    g_config.reason = 1;
                 printf("Increasing verbosity level to %d\n", g_config.verbose);
                 break;
                 
